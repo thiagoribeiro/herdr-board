@@ -18,7 +18,7 @@ fn a_task_routed_to_leve_whose_review_fails_escalates_to_padrao_in_the_same_work
     let fail: serde_json::Value = serde_json::from_str(FAIL).unwrap();
     w.script(json!({ "worker": [step(1), { "status": "working" }], "reviewer": [fail] }));
     let id = w.add("Typo in the readme");
-    sw::store::route::choose(&id, "leve", "typo, 1 arquivo", "coordinator").unwrap();
+    sw::store::route::choose(&id, "leve", "typo, 1 arquivo", "coordinator", &[]).unwrap();
     delegate(&id);
     let mut t = settle(&id);
     for _ in 0..3 { if t.s("stage") != "working" || handovers(&t).is_empty() { t = settle(&id); } }
@@ -50,7 +50,7 @@ fn escalate_after_two_sends_the_work_back_once_and_the_last_entry_has_the_usual_
     let mut again = fail.clone(); again["verdict"]["findings"][0]["id"] = json!("F1");
     w.script(json!({ "worker": [step(1), { "note": "Tried." }, { "note": "Tried more." }, { "status": "working" }], "reviewer": [fail.clone(), again.clone(), fail, again] }));
     let id = w.add("Feature");
-    sw::store::route::choose(&id, "leve", "", "coordinator").unwrap();
+    sw::store::route::choose(&id, "leve", "", "coordinator", &[]).unwrap();
     delegate(&id);
     let mut t = settle(&id);
     for _ in 0..6 { if t.s("stage") != "working" && t.s("stage") != "failed" && t.s("stage") != "approval" { t = settle(&id); } }

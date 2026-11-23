@@ -21,8 +21,14 @@ pub fn catalog_command(do_init: bool) -> Res<(Value, String)> {
     let mut c = load();
     // A model its program does not take is refused here, as `set` refuses it (its list is asked for only now).
     let mut refused = vec![];
-    c.entries.retain(|e| match models_fit("worker.agent", &json!(e.agent)) { Ok(()) => true, Err(x) => { refused.push(format!("entry {}: {}; this entry is not used", e.name, x.msg.trim_start_matches("worker.agent: "))); false } });
+    c.entries.retain(|e| match models_fit("worker.agent", &json!(e.agent)) { Ok(()) => true, Err(x) => { refused.push(format!("entry {}: {}; this entry is not used", e.name, x.msg.trim_start_matches("worker.agent: ").trim_end_matches('.'))); false } });
     c.problems.extend(refused);
+    // An entry that escalates to one refused here escalates to nothing, as a task routed to it would.
+    let names: Vec<String> = c.entries.iter().map(|e| e.name.clone()).collect();
+    for e in c.entries.iter_mut().filter(|e| !e.escalate_to.is_empty() && !names.contains(&e.escalate_to)) {
+        c.problems.push(format!("entry {}: escalate_to \"{}\" is not used, so it escalates to nothing", e.name, e.escalate_to));
+        e.escalate_to.clear();
+    }
     let file = tilde(&path().display().to_string());
     let used = summary(&c);
     let mode = setting_text("route.mode", None);

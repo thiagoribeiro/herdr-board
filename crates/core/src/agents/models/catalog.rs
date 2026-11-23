@@ -36,7 +36,13 @@ pub fn raw_of(text: &str, file: bool) -> Raw {
     let mut r = Raw { file, ..Default::default() };
     match toml::from_str::<toml::Table>(text) {
         Ok(t) => r.table = t,
-        Err(e) => { r.problems.push(format!("models.toml is not valid TOML, so nothing in it counts: {}", one_line(&e.to_string()))); return r; }
+        Err(e) => {
+            // The programs it allows still hold, read from their own line, so a slip elsewhere in the file never lets
+            // every program in again.
+            let kept = allow_line(text);
+            r.problems.push(format!("models.toml is not valid TOML, so nothing in it counts{}: {}", if kept.is_some() { " but its allow.agents" } else { "" }, one_line(&e.to_string())));
+            if let Some(t) = kept { r.table = t; r.table.remove("entry"); } else { return r; }
+        }
     }
     for k in r.table.keys() { if !["allow", "entry"].contains(&k.as_str()) { r.problems.push(format!("unknown part \"{k}\": a catalog has allow.agents and [[entry]] tables")); } }
     if let Some(a) = r.table.get("allow") {
@@ -51,6 +57,17 @@ pub fn raw_of(text: &str, file: bool) -> Raw {
         }
     }
     r
+}
+/// The allow.agents line of a file that is not valid TOML as a whole: `agents = [...]` under `[allow]`, or `allow.agents = [...]`.
+fn allow_line(text: &str) -> Option<toml::Table> {
+    let mut section = String::new();
+    for l in text.lines().map(str::trim) {
+        if l.starts_with('[') && !l.starts_with("[[") { section = l.trim_matches(|c| c == '[' || c == ']').trim().to_string(); continue; }
+        if l.starts_with("[[") { section = String::new(); continue; }
+        let line = if section == "allow" && l.starts_with("agents") { format!("[allow]\n{l}") } else if section.is_empty() && l.starts_with("allow.agents") { l.to_string() } else { continue };
+        if let Ok(t) = toml::from_str::<toml::Table>(&line) { return Some(t); }
+    }
+    None
 }
 fn one_line(s: &str) -> String { s.split_whitespace().collect::<Vec<_>>().join(" ") }
 
@@ -109,7 +126,7 @@ fn from(r: &Raw) -> Catalog {
         match entry_of(i, v, &r.allow) {
             Ok(e) if c.get(&e.name).is_some() => c.problems.push(format!("entry {}: the name is taken by an earlier entry, so this one is not used", e.name)),
             Ok(e) => c.entries.push(e),
-            Err(why) => c.problems.push(format!("{why}; this entry is not used")),
+            Err(why) => c.problems.push(format!("{}; this entry is not used", why.trim_end_matches('.'))),
         }
     }
     // An escalation goes to an entry that is there, and never round in a circle.

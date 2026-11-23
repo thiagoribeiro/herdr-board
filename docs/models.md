@@ -164,7 +164,8 @@ with why, by `models catalog`, and is not used.
 With it, any other is refused wherever it is named: an entry, a setting (`set worker.agent codex`), a fallback,
 `attempts.by`, `--worker.agent`. A value a hand wrote in your settings that names one does not count (`show` says so),
 and a built-in default that names one, such as `reviewer.agent codex`, is not started: `show` marks it
-(`refused when it starts: …`), and the review fails with the same words until you set another.
+(`refused when it starts: …`), and the review fails with the same words until you set another. A file that is not
+valid TOML counts for nothing but its `allow.agents` line, so a slip elsewhere never lets every program in again.
 
 ### Routing: `route.mode`
 
@@ -185,12 +186,17 @@ where each came from):
   worker.fallback  claude/opus    routed: padrao — "refator pequeno, 2 arquivos"
 ```
 
-- **What you name wins.** "Com opus" is `--worker.agent claude/opus`, the task's own setting: the route is then not read
-  at all (its effort neither), and `--route` given with it says it was not used.
-- **The plan and the review are not routed.** They stay on `plan.agent` and `reviewer.agent`: the strong check is what
-  makes a cheap worker safe.
+- **What you name wins.** "Com opus" is `--worker.agent claude/opus`, the task's own setting, set before or on the same
+  `add` or `delegate`: `--route` given with it says it was not used and keeps no route, so `models stats` does not count
+  it.
+- **The plan and the review are not routed.** The review stays on `reviewer.agent`: the strong check is what makes a
+  cheap worker safe. A plan written by a planner of its own (`plan.agent`) stays on it, and the build is routed. A plan
+  written by the working agent (`plan.approve` with `plan.agent none`, the default) is not routed, and since that
+  agent's conversation goes on into the build, the task is not routed at all: `--route` says it was not used, and
+  `route.default` is not given to it.
 - **Tasks the board starts by itself** (an automation, autopilot, a task chained with `--after`) get `route.default`,
-  an entry or `none`, under `route.mode coordinator`: no model is asked. An automation can name its own:
+  an entry or `none`, under `route.mode coordinator`: no model is asked. An entry the catalog does not have is refused
+  when it is set; one the catalog lost since is marked in `show` (`not used: …`). An automation can name its own:
   `automations add … --route leve` (its `route.default`), which counts whatever `route.mode` says.
   A coordinator on autopilot may pass `--route` only where its `autopilot.mayChange` allows `worker.agent`: a route
   sets the task's program; otherwise its answer says it was not applied, and `route.default` is used.

@@ -128,7 +128,9 @@ fn route_default_is_given_at_delegation_under_coordinator_mode_or_when_the_task_
     run(&["set", "route.default", "leve", "--task", &c]).unwrap();
     delegate(&c);
     assert_eq!(task(&c).at("route").s("entry"), "leve", "said on the task itself, it counts whatever route.mode says");
-    run(&["set", "route.default", "nada"]).unwrap();
+    assert!(run(&["set", "route.default", "nada"]).unwrap_err().starts_with("route.default: No entry \"nada\" in the catalog of models."), "a typo is refused when it is set");
+    // One a hand wrote, or one the catalog lost since: show says it is not used.
+    std::fs::write(sw::store::files::config_dir().join("config.json"), json!({ "route.default": "nada", "watcher.agent": "none", "coordinator.agent": "none" }).to_string()).unwrap();
     assert!(run(&["show"]).unwrap().1.contains("not used: no such entry in the catalog of models"));
 }
 
@@ -167,4 +169,58 @@ fn the_coordinators_rule_on_a_model_is_the_catalog_only_under_coordinator_mode()
     for want in ["run \"board models catalog\"", "--route <entry> --route.reason \"<why, one line", "Never a model of your own choosing, never an entry that is not in the catalog", "always wins over routing", "The plan and the review are never routed"] {
         assert!(r.contains(want), "{want}");
     }
+}
+
+#[test]
+fn a_route_with_a_model_named_beside_it_or_a_plan_its_working_agent_writes_is_not_used_nor_counted() {
+    let w = world_with(Opts { repo: true, settings: json!({ "review.when": "never" }), ..Default::default() });
+    catalog(TWO);
+    w.script(json!({ "worker": [{ "status": "working" }, { "status": "working" }, { "status": "working" }] }));
+    let a = w.add("Named");
+    let said = run(&["delegate", &a, "--route", "leve", "--route.reason", "r", "--worker.agent", "claude/opus"]).unwrap().1;
+    assert!(said.ends_with("(--route leve not used: worker.agent was named for this task, and the model you name wins)"), "{said}");
+    let t = task(&a);
+    assert!(t.at("route").is_null(), "no route record, so models stats does not count it");
+    assert_eq!(lookup("worker.agent", &Scope::task(&t), &yours()).unwrap().value, json!("claude/opus"));
+    assert!(run(&["models", "stats", "--since", "all"]).unwrap().0.arr("entries").is_empty());
+    // A plan its working agent writes (plan.agent none) is never routed, so neither is that agent.
+    let repo = w.root_str();
+    let (j, said) = run(&["add", "Planned", "--repo", &repo, "--plan.approve", "you", "--route", "leve"]).unwrap();
+    assert!(said.contains("--route leve not used: the task starts with a plan written by its working agent"), "{said}");
+    assert!(task(&j.t("id")).at("route").is_null());
+    run(&["set", "route.mode", "coordinator"]).unwrap();
+    run(&["set", "route.default", "leve"]).unwrap();
+    let b = w.add("Planned by default");
+    run(&["set", "plan.approve", "you", "--task", &b]).unwrap();
+    let mut t = task(&b);
+    sw::store::route::at_delegate(&mut t);
+    assert!(t.at("route").is_null(), "route.default is not given to it either");
+    // With a planner of its own the plan is plan.agent's, and the build is routed.
+    run(&["set", "plan.agent", "claude/opus", "--task", &b]).unwrap();
+    let mut t = task(&b);
+    sw::store::route::at_delegate(&mut t);
+    assert_eq!(t.at("route").s("entry"), "leve");
+    // The guard in the lookup: a plan step under way with no planner of its own reads no route.
+    t.put("plan", json!({ "asked": 1 }));
+    assert_eq!(lookup("worker.agent", &Scope::task(&t), &yours()).unwrap().from, "built in");
+    t.put("plan", json!({ "asked": 1, "writer": { "kind": "claude", "model": "opus" } }));
+    assert!(lookup("worker.agent", &Scope::task(&t), &yours()).unwrap().from.starts_with("routed: leve"));
+}
+
+#[test]
+fn a_catalog_that_is_not_valid_toml_still_allows_only_its_programs_and_refusals_read_plainly() {
+    let _w = world();
+    catalog("[allow]\nagents = [\"claude\"]\n\n[[entry]\nname = broken\n");
+    assert!(check("worker.agent", &json!("codex"), "").unwrap_err().msg.contains("codex is not allowed here"));
+    let said = run(&["models", "catalog"]).unwrap().1;
+    assert!(said.contains("Programs allowed: claude (allow.agents)") && said.contains("models.toml is not valid TOML, so nothing in it counts but its allow.agents"), "{said}");
+    catalog("allow.agents = [\"claude\"]\nentry = 3 3\n");
+    assert!(check("worker.agent", &json!("codex"), "").is_err());
+    // An entry that escalates to one whose model is refused escalates to nothing, and says so; no doubled stop.
+    catalog("[[entry]]\nname = \"ok\"\nagent = \"claude\"\nescalate_to = \"ok2\"\n\n[[entry]]\nname = \"ok2\"\nagent = \"claude/nonexistentmodel\"\n\n[[entry]]\nname = \"x\"\nagent = \"nope\"\n");
+    let said = run(&["models", "catalog"]).unwrap().1;
+    assert!(!said.contains("escalates to ok2"), "{said}");
+    assert!(said.contains("entry ok: escalate_to \"ok2\" is not used, so it escalates to nothing"), "{said}");
+    assert!(said.contains("entry ok2: claude has no model \"nonexistentmodel\""), "{said}");
+    assert!(!said.contains(".;"), "{said}");
 }

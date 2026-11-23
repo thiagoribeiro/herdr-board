@@ -65,7 +65,7 @@ pub fn command(cmd: &str, a: &Args) -> Res<(Value, String)> {
             };
             // Added from a coordinator's pane, in any turn: its own, which its autopilot's `added` never wakes it for.
             if let (None, Some(co)) = (&pilot, crate::autopilot::turn::caller()) { crate::store::tasks::set(t.s("id"), json!({ "coordinator": co.settings_key() }))?; }
-            let routed = match &route { Some(r) => crate::store::route::choose(t.s("id"), r, &flag("route.reason").unwrap_or_default(), "coordinator")?, None => String::new() };
+            let routed = match &route { Some(r) => crate::store::route::choose(t.s("id"), r, &flag("route.reason").unwrap_or_default(), "coordinator", &[])?, None => String::new() };
             // Added by the Coordinator from a message the human sent with the start key: delegated here, flag or no flag.
             let mut tab = false;
             if !flags.b("delegate") && !crate::util::env_set("HERDR_PLUGIN_ID") { if let Some(p) = crate::util::env_val("HERDR_PANE_ID") { tab = crate::coordinator::requests::tab_turn(&p, &current_socket()); } }
@@ -115,7 +115,8 @@ pub fn command(cmd: &str, a: &Args) -> Res<(Value, String)> {
             let (mut settings, research) = pick_choices(flags);
             if let Some(r) = research { settings.push(("research.only".into(), json!(r))); }
             let wait = crate::after::Wait { after: flag("after").map(|r| crate::after::refs_of(&r)), now: flags.b("now") };
-            let routed = match flag("route") { Some(r) => crate::store::route::choose(find(&need(1, "an id")?)?.s("id"), &r, &flag("route.reason").unwrap_or_default(), "coordinator")?, None => String::new() };
+            // The settings given with it count as the task's own: a model named here wins over the route.
+            let routed = match flag("route") { Some(r) => crate::store::route::choose(find(&need(1, "an id")?)?.s("id"), &r, &flag("route.reason").unwrap_or_default(), "coordinator", &settings)?, None => String::new() };
             let t = start::delegate_with(&need(1, "an id")?, settings, wait)?;
             let how = if let Some(w) = crate::after::waiting_words(&t) { format!("delegated, it {w}") }
                 else if t.s("stage") == "attempts" { format!("started, {} attempts at once ({})", t.arr("attempts").len(), t.arr("attempts").iter().map(|x| format!("{} {}", x.s("letter"), x.s("agent"))).collect::<Vec<_>>().join(", ")) }

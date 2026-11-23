@@ -29,13 +29,32 @@ pub fn record(c: &Catalog, name: &str, reason: &str, by: &str) -> Res<Value> {
         .map(|(_, x)| json!({ "name": x.name, "agent": x.agent, "effort": x.effort, "cost": x.cost })).collect();
     Ok(json!({ "entry": e.name, "first": e.name, "reason": one_line(reason, 200), "by": by, "at": now(), "chain": chain, "escalated": [] }))
 }
+/// `route.default` names an entry of the catalog, or none: checked when it is set, as `--route` is.
+pub fn default_fits(name: &str, v: &Value) -> Res<()> {
+    if name != "route.default" || text(v) == NONE { return Ok(()); }
+    checked(&text(v)).map_err(|e| crate::err::Error::refused(format!("route.default: {}", e.msg)))
+}
 /// Checked before anything is added: a refused `--route` adds nothing.
 pub fn checked(name: &str) -> Res<()> { record(&load(), name, "", "").map(|_| ()) }
-/// Give a task its route (`--route`). What it says after the task's own line.
-pub fn choose(id: &str, name: &str, reason: &str, by: &str) -> Res<String> {
+/// Why a route would not be used on this task, with `given` (settings about to be set on it, as `delegate --<name>`
+/// gives them) counted as its own: you named its program, which wins; or its plan is written by its working agent,
+/// whose conversation goes on into the build, and a plan is never routed. None: it would be used.
+pub fn unused_why(t: &Task, given: &[(String, Value)]) -> Option<String> {
+    let said = |n: &str| given.iter().find(|(k, _)| k == n).map(|(_, v)| text(v)).filter(|v| !v.is_empty());
+    if human_chose(t) || said("worker.agent").is_some() { return Some("worker.agent was named for this task, and the model you name wins".into()); }
+    let approve = said("plan.approve").unwrap_or_else(|| setting_text("plan.approve", Some(t)));
+    let writer = said("plan.agent").unwrap_or_else(|| setting_text("plan.agent", Some(t)));
+    if approve != NONE && !approve.is_empty() && (writer == NONE || writer.is_empty()) {
+        return Some("the task starts with a plan written by its working agent, and a plan is never routed: that agent stays on worker.agent for the build too. Set plan.agent to have the build routed".into());
+    }
+    None
+}
+/// Give a task its route (`--route`). What it says after the task's own line. `given`: settings set with it.
+pub fn choose(id: &str, name: &str, reason: &str, by: &str, given: &[(String, Value)]) -> Res<String> {
     let r = record(&load(), name, reason, by)?;
-    let t = update(id, |t| { if human_chose(t) { return Ok(Change::Keep); } t.put("route", r.clone()); Ok(Change::Write) })?;
-    if human_chose(&t) { return Ok(format!(" (--route {name} not used: worker.agent was named for this task, and the model you name wins)")); }
+    let mut why = None;
+    update(id, |t| { why = unused_why(t, given); if why.is_some() { t.del("route"); } else { t.put("route", r.clone()); } Ok(Change::Write) })?;
+    if let Some(w) = why { return Ok(format!(" (--route {name} not used: {w})")); }
     Ok(format!(", routed to {}", r.s("entry")))
 }
 /// The entry of the chain that is on the task now.
@@ -50,6 +69,8 @@ pub fn from_words(r: &Value) -> String {
 /// The settings its route says, and where they came from; None for a task with no route, or one whose program you named.
 pub fn place_of(t: &Task) -> Option<(Obj, String)> {
     if t.b("attemptOf") || human_chose(t) { return None; }
+    // A plan its working agent writes is never routed (at_delegate takes such a route off; this is the guard).
+    if t.at("plan").is_object() && !t.at("plan").b("writer") { return None; }
     let r = t.at("route");
     let cur = current(r)?;
     let mut o = Obj::new();
@@ -75,8 +96,9 @@ pub fn on_handover(t: &mut Task, next: &str) {
 /// Delegated: a task with a route starts again on its first entry; one with none gets `route.default`, under
 /// `route.mode coordinator` or when the task (or the automation that made it) says it itself. No model is asked.
 pub fn at_delegate(t: &mut Task) {
+    // Not to be used: taken off, so that it is neither read nor counted by `models stats`.
+    if t.b("attemptOf") || unused_why(t, &[]).is_some() { t.del("route"); return; }
     if t.at("route").is_object() { let first = t.at("route").t("first"); if !first.is_empty() { t.obj_mut("route").put("entry", first); } return; }
-    if human_chose(t) || t.b("attemptOf") { return; }
     let Ok(f) = lookup("route.default", &Scope::task(t), &yours()) else { return };
     let name = text(&f.value);
     if name.is_empty() || name == NONE || (setting_text("route.mode", Some(t)) != "coordinator" && f.place != "task") { return; }
