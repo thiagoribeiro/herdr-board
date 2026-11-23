@@ -4,9 +4,9 @@
 everything the board does. The others work too, with a few limits (below).
 
 ```
-herdr-projects set reviewer.agent agy/gemini-3-pro
-herdr-projects set worker.fallback "codex, copilot/gpt-5.5"
-herdr-projects delegate 12 --worker.agent qwen --reviewer.agent cursor
+herdr-board set reviewer.agent agy/gemini-3-pro
+herdr-board set worker.fallback "codex, copilot/gpt-5.5"
+herdr-board delegate 12 --worker.agent qwen --reviewer.agent cursor
 ```
 
 A model goes after a slash ([models and effort](models.md)). The settings that pick a program are `worker.agent`,
@@ -93,7 +93,7 @@ A program that cannot do a role well is refused when you set it, with the reason
   one-shot does take one, so `watcher.agent droid/<model>` works.
 - **A model name** the program does not take, with the names it does. They are read from the program's own list where
   it has one (`codex debug models`, `pi --list-models`, `cursor-agent models`, `opencode models`), else from the names
-  written in the table (Claude Code). `herdr-projects models` lists them ([models and effort](models.md)).
+  written in the table (Claude Code). `herdr-board models` lists them ([models and effort](models.md)).
 - **An effort** the program does not have: a level not on the list the program gives (Codex's catalog, for the model;
   the others' `--help`; the table's where it cannot be read), or any level where it takes none at start (most of
   Herdr's others). Cursor takes its effort in the model's name: `cursor/claude-opus-4-8[effort=high]`.
@@ -116,7 +116,7 @@ tested). The board does not take them. Each would be one more entry in the table
 
 ## The programs
 
-<!-- made:agents Made by `herdr-projects docs` from crates/core/src/agents/kinds/. Do not edit between these two lines. -->
+<!-- made:agents Made by `herdr-board docs` from crates/core/src/agents/kinds/. Do not edit between these two lines. -->
 | Program | Started for work as | Model | Effort | Asking first | Auto mode | Standing rules | Reopened by | Watcher's one-shot | Turn's end read from | herdr's integration | Can do | Checked |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | `claude` | `claude --dangerously-skip-permissions` | `--model <model>`; `default`, `fable`, `opus`, `sonnet`, `haiku`, `opusplan` or one of its full names in the table (`claude-fable-5-1`, `claude-fable-5`, `claude-opus-5-5`) | `--effort <level>`; the levels `claude --help` lists, else low, medium, high, xhigh, max | its own default | `--permission-mode auto`, from 2.1.111 | `--append-system-prompt-file <file>` | `--resume <id>` | `claude -p --no-session-persistence --tools ""`, the prompt on its input | its conversation file | `claude` | every role | everything the board does, on 2.1.296 to 2.1.300 |
