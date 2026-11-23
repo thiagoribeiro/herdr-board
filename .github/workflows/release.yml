@@ -2,7 +2,7 @@
 #
 # Runs when a tag `v*` is pushed (`git tag v1.3.0 && git push origin v1.3.0`), or by hand with a tag to build the files
 # of an existing release again; by hand with `dry_run` it builds and checks every file but attaches nothing, to test the
-# workflow itself. Each file is `herdr-board-<os>-<arch>` (os linux|macos, arch x86_64|aarch64) with its `.sha256`
+# workflow itself. Each file is `herdr-board-<os>-<arch>` (os linux, arch x86_64|aarch64; this fork builds Linux only) with its `.sha256`
 # beside it: bin/run.sh and `herdr-board update` download exactly these names. The Linux files are static (musl), so
 # they run on any Linux. The tag must be the version in Cargo.toml and herdr-plugin.toml, or the run fails: run.sh asks
 # for the release named by Cargo.toml's version.
@@ -35,8 +35,6 @@ jobs:
         include:
           - { target: x86_64-unknown-linux-musl, runner: ubuntu-24.04, file: herdr-board-linux-x86_64, runs: true }
           - { target: aarch64-unknown-linux-musl, runner: ubuntu-24.04, file: herdr-board-linux-aarch64, zig: true }
-          - { target: x86_64-apple-darwin, runner: macos-latest, file: herdr-board-macos-x86_64 }
-          - { target: aarch64-apple-darwin, runner: macos-latest, file: herdr-board-macos-aarch64, runs: true }
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v7
@@ -110,7 +108,7 @@ jobs:
       - name: Check every file is there
         working-directory: dist
         run: |
-          for os in linux macos; do for arch in x86_64 aarch64; do
+          for os in linux; do for arch in x86_64 aarch64; do
             f="herdr-board-$os-$arch"
             [ -s "$f" ] && [ -s "$f.sha256" ] || { echo "::error::$f or its checksum is missing"; exit 1; }
             sha256sum -c "$f.sha256"
