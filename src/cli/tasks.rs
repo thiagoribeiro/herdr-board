@@ -51,14 +51,21 @@ pub fn command(cmd: &str, a: &Args) -> Res<(Value, String)> {
             let after = flag("after").map(|r| crate::after::checked(None, &crate::after::refs_of(&r))).transpose()?;
             let opts = filing::AddOpts { description: flag("desc").or_else(|| flag("description")).unwrap_or_default(), repo: flag("repo").unwrap_or_default(), research, settings, from };
             // On another machine the board knows (remote/add.rs); in an autopilot turn within its limits (autopilot/add.rs).
+            // The catalog's entry it works on (store/route.rs), checked before anything is added.
+            let mut route = flag("route");
+            // In an autopilot turn a route sets the task's program: only where `autopilot.mayChange` allows worker.agent.
+            let route_dropped = matches!(&pilot, Some(co) if route.is_some() && !crate::store::settings::pilot_values::may_change(&crate::autopilot::record::words(co, "autopilot.mayChange"), "worker.agent"));
+            if route_dropped { route = None; }
+            if let Some(r) = &route { if flags.has("on") { crate::fail!("--route goes with a task of this machine: on another machine, name the model (--worker.agent)."); } crate::store::route::checked(r)?; }
             if let Some(on) = flag("on") { return add_on(&on, &rest(1), opts, flags.b("delegate"), pilot.as_ref()); }
             // In an autopilot turn: within its limits, and started at once by `autopilot.startAtOnce` (autopilot/add.rs).
             let (t, start, dropped) = match &pilot {
-                Some(co) => { let a = crate::autopilot::add::add(co, &here, &rest(1), opts, after.as_deref().unwrap_or(&[]), flags.b("delegate"))?; (a.task, a.start, crate::autopilot::add::dropped_words(&a.dropped)) }
+                Some(co) => { let mut a = crate::autopilot::add::add(co, &here, &rest(1), opts, after.as_deref().unwrap_or(&[]), flags.b("delegate"))?; if route_dropped { a.dropped.push("--route".into()); } (a.task, a.start, crate::autopilot::add::dropped_words(&a.dropped)) }
                 None => (filing::add(&here, &rest(1), opts)?, false, String::new()),
             };
             // Added from a coordinator's pane, in any turn: its own, which its autopilot's `added` never wakes it for.
             if let (None, Some(co)) = (&pilot, crate::autopilot::turn::caller()) { crate::store::tasks::set(t.s("id"), json!({ "coordinator": co.settings_key() }))?; }
+            let routed = match &route { Some(r) => crate::store::route::choose(t.s("id"), r, &flag("route.reason").unwrap_or_default(), "coordinator")?, None => String::new() };
             // Added by the Coordinator from a message the human sent with the start key: delegated here, flag or no flag.
             let mut tab = false;
             if !flags.b("delegate") && !crate::util::env_set("HERDR_PLUGIN_ID") { if let Some(p) = crate::util::env_val("HERDR_PANE_ID") { tab = crate::coordinator::requests::tab_turn(&p, &current_socket()); } }
@@ -69,7 +76,7 @@ pub fn command(cmd: &str, a: &Args) -> Res<(Value, String)> {
                 let how = crate::after::waiting_words(&d).map(|w| format!(", it {w}")).unwrap_or_else(|| ", an agent is on it".into());
                 format!("{how}{}", if tab { format!(" (the message was sent with {})", key_name("delegate")) } else { String::new() })
             } else if let Some(d) = &after { format!(", it will wait for {} to be done once it is delegated", crate::after::names(d)) } else { String::new() };
-            (shown_of(t.s("id")), format!("{}: added{}{on}{}{dropped}", t.s("id"), if crate::chat_only::is_chat(&t) { " as chat only" } else if is_research(&t) { " as research only" } else { "" }, title_note(&rest(1))))
+            (shown_of(t.s("id")), format!("{}: added{routed}{}{on}{}{dropped}", t.s("id"), if crate::chat_only::is_chat(&t) { " as chat only" } else if is_research(&t) { " as research only" } else { "" }, title_note(&rest(1))))
         }
         "list" | "ls" if flags.b("pinned") => { let keys = repo_keys(); super::pins::list(board(true), &|t| line(t, &keys), &brief) }
         "list" | "ls" => {
@@ -108,11 +115,12 @@ pub fn command(cmd: &str, a: &Args) -> Res<(Value, String)> {
             let (mut settings, research) = pick_choices(flags);
             if let Some(r) = research { settings.push(("research.only".into(), json!(r))); }
             let wait = crate::after::Wait { after: flag("after").map(|r| crate::after::refs_of(&r)), now: flags.b("now") };
+            let routed = match flag("route") { Some(r) => crate::store::route::choose(find(&need(1, "an id")?)?.s("id"), &r, &flag("route.reason").unwrap_or_default(), "coordinator")?, None => String::new() };
             let t = start::delegate_with(&need(1, "an id")?, settings, wait)?;
             let how = if let Some(w) = crate::after::waiting_words(&t) { format!("delegated, it {w}") }
                 else if t.s("stage") == "attempts" { format!("started, {} attempts at once ({})", t.arr("attempts").len(), t.arr("attempts").iter().map(|x| format!("{} {}", x.s("letter"), x.s("agent"))).collect::<Vec<_>>().join(", ")) }
                 else if t.s("stage") == "queued" { format!("started, {}", queue_words(&crate::flow::live::saved(&t))) } else { "started, an agent is on it".into() };
-            (shown_of(t.s("id")), format!("{}: {how}", t.s("id")))
+            (shown_of(t.s("id")), format!("{}: {how}{routed}", t.s("id")))
         }
         "after" => {
             let refs = if flags.b("clear") { Some(vec![]) } else if pos.len() > 2 { Some(crate::after::refs_of(&rest(2))) } else { None };
@@ -164,6 +172,8 @@ pub fn command(cmd: &str, a: &Args) -> Res<(Value, String)> {
             let w = Where { task: flag("task"), repo: flag("repo"), automation: flag("automation"), coord };
             settings_command(cmd, pos, &w, if pos.len() > 2 { Some(json!(rest(2))) } else { None })?
         }
+        "models" if pos.get(1).map(|s| s.as_str()) == Some("catalog") => crate::agents::models::catalog_say::catalog_command(flags.b("init"))?,
+        "models" if pos.get(1).map(|s| s.as_str()) == Some("stats") => crate::agents::models::stats::stats_command(&flag("since").unwrap_or_default(), &crate::agents::models::catalog::load())?,
         "models" => crate::agents::models::say::models_command(&pos.get(1).cloned().unwrap_or_default())?,
         "automations" | "automation" => crate::automations::command::automations_command(&pos[1..], flags, &here)?,
         "coordinator" => coordinator(a, &here, me.as_ref())?,
