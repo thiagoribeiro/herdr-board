@@ -19,7 +19,7 @@ pub trait Audio: Send {
     fn flush(&mut self);
     /// Whether the sound is echo cancelled: without it, headphones.
     fn aec(&self) -> bool;
-    /// What runs the sound, for `herdr-projects voice`.
+    /// What runs the sound, for `herdr-board voice`.
     fn how(&self) -> String;
     fn stop(&mut self);
 }
