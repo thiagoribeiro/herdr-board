@@ -1,5 +1,6 @@
 //! Pull requests are watched: failed checks, a requested change or new feedback wake the agent; a merge made
-//! elsewhere marks the task done. Conflicts with main are found by the board's own sync (sync.rs), not here.
+//! elsewhere marks the task done, also while its agent is still at work (`mergedOutside`: you merged it on GitHub,
+//! not the board). Conflicts with main are found by the board's own sync (sync.rs), not here.
 //! A task waiting on a login is the human's: pull-request feedback does not wake its agent until that is cleared.
 use crate::actions::finish_line::send_failure;
 use crate::clock::now;
@@ -15,7 +16,7 @@ fn needs_login(t: &Task) -> bool { t.at("failure").b("auth") || (t.s("stage") ==
 pub fn poll_prs() {
     super::fetch_mains();
     for first in list(ListOpts::default()) {
-        if !first.b("pr") || first.b("prMerged") || runner_alive(&first) || (first.s("stage") == "working" && !first.b("autoMerge")) || needs_login(&first) { continue; }
+        if !first.b("pr") || first.b("prMerged") || runner_alive(&first) || needs_login(&first) { continue; }
         // Its checks as the token can read them (land/readable.rs): a fine-grained token cannot read GitHub's list.
         match readable::pr_view(&folder_of(first.s("id")), first.s("pr"), "state,reviewDecision,author,comments,reviews,headRefOid,mergeCommit") {
             Ok(r) => poll_one(first.s("id"), first.s("pr"), &r.view, r.via()),
@@ -68,6 +69,7 @@ fn poll_one(id: &str, pr: &str, j: &Value, via: &str) {
         if j.s("state") == "MERGED" {
             let h = if !head.is_empty() { head.clone() } else { t.t("prHead") };
             mode = if covered(&local(), &h) { "always" } else { "merged" };
+            if !t.b("autoMerge") && !t.b("mergeIntent") { t.put("mergedOutside", true); }
             t.put("stage", "done"); t.put("mergedAt", now()); if j.at("mergeCommit").b("oid") { t.put("mergeCommit", j.at("mergeCommit").t("oid")); } let tm = tidy_mark(t, mode, ""); t.put("tidy", tm.unwrap_or(Value::Null)); t.put("msg", format!("Merged: {pr}"));
             t.put("failure", Value::Null); t.put("prFailure", Value::Null); t.put("prMerged", true); t.put("prState", "merged"); t.put("autoMerge", false); t.put("mergeIntent", Value::Null);
             then = Then::Merged;
