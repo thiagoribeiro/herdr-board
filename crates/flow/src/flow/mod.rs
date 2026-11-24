@@ -7,6 +7,7 @@ pub mod pane_owner;
 pub mod send;
 pub mod sidebar;
 pub mod sidebar_entry;
+pub mod sidebar_tree;
 pub mod spaces;
 pub mod tabs;
 pub mod talk;

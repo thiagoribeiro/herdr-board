@@ -6,7 +6,6 @@ mod far;
 mod move_home;
 mod review_kit;
 mod takeover_kit;
-
 mod after;
 mod after_far;
 mod after_more;
@@ -159,6 +158,7 @@ mod flow;
 mod flow_more;
 mod flow_rest;
 mod flow_sidebar_ids;
+mod flow_sidebar_tree;
 mod gate;
 mod gate_more;
 mod gate_rest;
