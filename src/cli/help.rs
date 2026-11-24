@@ -9,6 +9,8 @@ pub const HELP: &str = r#"herdr-board: a work board for herdr
                                        conversation that changes nothing and ends only when you say: finish <id>.
                                        --on: add it on another machine the board knows, as that machine adds its own)
   herdr-board list [--archived] [--all] [--pinned] [--query TEXT] [--json]
+  herdr-board status [--all] [--json]       one line per active task: where it stands and for how long, whose turn it
+                                                is (you, agent, board, github), the next step, and why it stalled
   herdr-board report <id> --state idle|working|blocked|done|error [--kind question|permission|auth] [--msg TEXT] [--title TEXT]
                          [--progress 0-100] [--eta MINUTES]   (your own task, with --state working: how far, and minutes left)
   herdr-board describe <id> <text>          write or replace a task's description

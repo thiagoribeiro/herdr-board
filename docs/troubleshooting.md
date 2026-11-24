@@ -12,6 +12,7 @@
 | `herdr-board models [program]` | the model names each agent program takes here, or why its list cannot be read ([models](models.md)) |
 | `herdr-board machines` | whether each other machine answers, how much disk each has free, and why not ([other machines](other-machines.md)) |
 | `herdr-board sweep` | removes what ended tasks left behind now, and says what ([disk space](disk-space.md)) |
+| `herdr-board status` | every active task in one line: where it stands, for how long, whose turn it is and the next step ([status](status.md)) |
 | `herdr-board show <id>` | every setting a task runs on, and where each value comes from ([settings](settings.md)) |
 | `herdr-board details <id>` | everything about one task: reviews, hand-overs, limits, what it waits for |
 | `herdr workspace list` | whether Herdr itself runs and answers |
@@ -103,11 +104,15 @@ Find what its row says:
 | `Finishing` for a long time, with the agent at rest | the board missed the end of its turn | `Ctrl+L`, or `herdr-board finish <id>` |
 | `Stopped without a summary` | the agent stopped and the board cannot tell if it finished | `Ctrl+R` tells it to go on; `Ctrl+L` takes the work as it is |
 | `Agent's connection dropped, trying again in 2m` | the provider cut the turn off | nothing: the board retries by itself ([a turn cut off by the provider](provider-errors.md)) |
+| `Agent stopped: The agent's program exited. …` | its program quit in the middle of its turn, with no error that passes by itself | read its last words in the panel; `Ctrl+R` (`herdr-board retry <id>`) starts it again ([below](#a-task-is-stalled)) |
 | `Agent stopped` | an error waiting cannot fix: a usage limit, a refusal | read the reason in the panel; reply, or `Ctrl+R` |
 | `Agent stopped: … can't be used with your ChatGPT sign-in` | its program refused its model | choose a model, then `Ctrl+L` ([above](#cant-be-used-with-your-chatgpt-sign-in-while-the-agent-works)) |
 | `Plan ready` · `The plan's review could not run (…): yours to judge` | the reviewer of a plan (`plan.approve reviewer`) could not start or gave no verdict | read the plan; `Ctrl+L` builds it, a reply sends it back, `herdr-board retry <id>` has the reviewer look again ([a plan first](plan.md#the-reviewers-look)) |
 | `Needs a login` | the agent's program is logged out | log in (go into the agent with `Enter`), then reply or `Ctrl+R` |
 | `stopped at its 2h limit` | it reached `limit.time` or `limit.tokens` | `Ctrl+R` to continue, a higher limit, or `Ctrl+L` to take it as it is ([limits](limits.md)) |
+| `No change for 2h · …` | nothing moved for longer than `stall.after` ([below](#a-task-is-stalled)) | see below |
+| `Pull request conflicts with main` | GitHub says its pull request no longer merges ([below](#a-pull-request-conflicts-with-main)) | nothing with `merge.fixConflicts` on; otherwise `Ctrl+R` |
+| `main could not be fetched, last try 14:02` | the remote cannot be reached ([below](#behind-main-main-could-not-be-fetched)) | nothing: the board keeps trying |
 | `resolving a conflict with main` | main changed under it; its agent is fixing that | wait |
 | `behind main` | main could not be brought in; the work itself is fine | the board tries again every minute; the reason is in the panel ([below](#behind-main-main-could-not-be-fetched)) |
 | `Waiting for GitHub checks · 2 of 3 passed` | the pull request's checks still run | wait: it merges by itself once they pass |
@@ -119,6 +124,42 @@ agent and answer it there.
 
 **An agent asked a question in plain words and stopped**: the board takes that as finished and reviews it. Reply to the
 agent, and it goes on ([an agent that waits for you](waiting-for-you.md)).
+
+## A task is stalled
+
+The board looks for a task that stopped moving by fixed rules, with no model and no tokens spent. Each one is said first
+on the task's row, in Herdr's sidebar and in `herdr-board status`, with the reason:
+
+| Rule | The row says | Notify event |
+|---|---|---|
+| working or merging with no change (no new stage, its agent not seen at work by Herdr) for longer than `stall.after` (`45m`; `none` turns it off) | `No change for 14h` | `stalled` |
+| GitHub says its pull request conflicts with main (`mergeable` is `CONFLICTING`) | `Pull request conflicts with main` | `conflict` |
+| its pull request was merged on GitHub, not by the board, while the task was still open | it goes to done by itself, `Merged: …` | `merged outside` |
+| main could not be fetched | `main could not be fetched, last try 14:02` | none: the board tries again by itself |
+| its agent's program exited in the middle of its turn | `Agent stopped: The agent's program exited. Its last words: …`, a real failure | `failed` |
+
+The events go to `board.notify` as any other one, in `HERDR_BOARD_EVENT`, once each.
+
+**What the board clears by itself**:
+
+- **An agent cut off by its provider or its connection** ("API Error: Connection lost mid-response"), also when its
+  program exited on it: the board waits, then tells it to carry on (starting it again if it exited), with growing waits.
+  Only after the last try is it yours ([a turn cut off by the provider](provider-errors.md)).
+- **A pull request in conflict with main** goes back to its agent, as a review round does (within `review.rounds`): it
+  brings main in, resolves and finishes again ([below](#a-pull-request-conflicts-with-main)).
+- **Everything else that needs a decision** waits for you, with the reason.
+
+**A stalled task**: `Finishing` for long is a turn whose end the board missed: `Ctrl+L` (`herdr-board finish <id>`).
+`Merging` for long names what it waits for on its row (GitHub's checks, its turn to merge). A working agent that does
+nothing: go into it (`Enter`) and look.
+
+### A pull request conflicts with main
+
+Main moved under the pull request and GitHub cannot merge it any more. With `merge.fixConflicts` on (the default) the
+board sends it back to the task's agent, which merges main into its branch, resolves the conflicts and finishes again;
+the check and the review then run as usual. With it off, or once `review.rounds` is used up, the task waits for you as
+`Pull request conflicts with main`: `Ctrl+R` sends it to the agent, or resolve it yourself in the task's worktree. The
+row goes back to normal once GitHub says the pull request merges cleanly.
 
 ## A done task stays in Herdr's sidebar
 

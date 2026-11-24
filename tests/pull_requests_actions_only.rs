@@ -130,18 +130,3 @@ fn a_keeper_started_without_gh_login_takes_it_from_the_login_shell_and_a_process
     assert!(gh_login("PATH=/x\n", |_| false).is_empty());
     assert_eq!(path_of(out), "/a/bin:/b/bin");
 }
-
-#[test]
-/// Merged outside the board (on GitHub, by you) while the task works: done, said so, and notified (TRM-4).
-fn a_pull_request_merged_on_github_while_the_task_works_makes_it_done() {
-    let w = world_with(Opts { repo: true, origin: true, ..Default::default() });
-    let id = to_approval(&w, "Merged elsewhere");
-    // the human typed in the agent's terminal: the task is at work again, and then merges its pull request on GitHub
-    sw::store::tasks::update(&id, |t| { t.put("stage", "working"); Ok(sw::store::tasks::Change::Write) }).unwrap();
-    w.gh_says(json!({ "view": { "state": "MERGED", "headRefOid": task(&id).at("prHead") } }));
-    poll_prs();
-    let t = settle(&id);
-    assert_eq!(t.s("stage"), "done");
-    assert!(t.b("mergedOutside"));
-    assert_eq!(sw::notify::event_of(&t), "merged outside");
-}

@@ -1,5 +1,8 @@
 //! The board.notify setting: a task that needs you, is ready to approve or failed rings the bell on an open board or
-//! runs your command, once per event; `none`, the built-in value, does neither.
+//! runs your command, once per event; `none`, the built-in value, does neither. A stall and `herdr-board status`
+//! are in notify/.
+mod stall;
+mod status;
 use crate::common;
 use common::*;
 use serde_json::json;

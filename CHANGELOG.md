@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+### Status and stalls
+
+- `herdr-board status`: one line per active task, with where it stands, for how long, whose turn it is (you, the
+  agent, the board or GitHub) and the next step; `--json` for scripts, `--all` with done tasks too ([status](docs/status.md)).
+- A task that stopped moving is found by fixed rules, with no model: too long working or merging (`stall.after`, 45m),
+  a pull request GitHub finds in conflict with main, main that cannot be fetched (with the time of the last try). Its
+  row, Herdr's sidebar and `status` say why, and `board.notify` hears `stalled` and `conflict`
+  ([troubleshooting](docs/troubleshooting.md#a-task-is-stalled)).
+- A pull request in conflict with main goes back to its agent by itself, as a review round does (`merge.fixConflicts`,
+  on by default).
+- Fixed: a pull request merged on GitHub while its task still said "working" was never seen; the task now goes to done,
+  and `board.notify` hears `merged outside`.
+- Fixed: an agent whose program exited in the middle of its turn (after "API Error: Connection lost mid-response") stayed
+  "working" with nothing for `retry` to send. It is now a real failure, retried by itself when its last words are a
+  passing provider error.
+
 ### Herdr's sidebar
 
 - Task agents stand in a tree under the coordinator that added them (the Coordinator, the machine's or a project's):

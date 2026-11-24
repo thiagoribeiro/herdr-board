@@ -1,6 +1,6 @@
 //! Reconcile compares a linked task with herdr: pane gone, pane alive with no agent, a finished turn nobody handled,
-//! a runner lost before its step was done (hook/lost.rs). A task whose pane id no longer matches, or now names
-//! another's pane, is linked again.
+//! a runner lost before its step was done (hook/lost.rs), an agent whose program exited mid-turn (finish/turn_ended.rs).
+//! A task whose pane id no longer matches, or now names another's pane, is linked again.
 use super::apply;
 use crate::clock::now;
 use crate::flow::task::is_agent_task;
@@ -31,12 +31,16 @@ pub fn reconcile(t: &Task, api: &Herdr) {
         return upd(id, |t| { if t.at("last").b("gone") { return false; } let l = t.obj_mut("last"); l.put("gone", true); l.put("status", Value::Null); l.put("at", now()); true });
     };
     let Some(a) = agent else {
-        return upd(id, |t| {
+        let mut mid_turn = false;
+        upd(id, |t| {
             if t.at("last").has("status") == false && t.at("last").is_object() && !t.at("last").b("gone") && t.b("exitedAt") { return false; }
             let l = t.obj_mut("last"); l.put("status", Value::Null); l.put("gone", false); l.put("at", now());
-            if !t.b("exitedAt") { t.put("exitedAt", now()); }
+            if !t.b("exitedAt") { t.put("exitedAt", now()); mid_turn = t.s("stage") == "working" && !crate::runner::runner_alive(t); }
             true
         });
+        // Its program exited in the middle of its turn: the finish line says why, a passing error tried again by itself.
+        if mid_turn { crate::runner::spawn_runner("finish", id, &[]); }
+        return;
     };
     let cwd = cwd_of(t);
     if !same_dir(a.s("cwd"), &cwd) && !same_dir(a.s("foreground_cwd"), &cwd) { return; }

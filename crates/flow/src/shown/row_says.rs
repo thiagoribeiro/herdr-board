@@ -42,6 +42,8 @@ pub fn sentence(r: &Obj) -> Inked {
     let asks = |s: String| if r.s("state") == "blocked" { Inked::of(s, status_ink(r)) } else { quiet(s) };
     // Cut off by its provider, and the board tries again by itself: the row says why and when.
     if waiting_of(r).is_some() { return quiet(words(r.s("msg"))); }
+    // Stalled, in conflict, main out of reach (stall.rs): the reason first, then what it says otherwise.
+    if r.at("stall").b("why") { let m = words(r.s("msg")); return Inked::of(r.at("stall").t("why"), Ink::Peach).add(quiet(if m.is_empty() { m } else { format!(" · {m}") })); }
     if let Some(f) = failure_for(r) { if !f.b("sentAt") && (r.b("failure") || r.b("prFailure")) { return asks(words(if f.b("msg") { f.s("msg") } else { f.s("title") })); } }
     // A chat with its agent changed no code: the review's result, and that it still stands (flow/chat.rs).
     let kept = |t: String| if r.b("chatKept") { [t, crate::flow::chat::KEPT_LINE.to_string()].into_iter().filter(|s| !s.is_empty()).collect::<Vec<_>>().join(" · ") } else { t };

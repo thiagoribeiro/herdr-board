@@ -71,6 +71,7 @@ pub fn command(cmd: &str, a: &Args) -> Res<(Value, String)> {
             } else if let Some(d) = &after { format!(", it will wait for {} to be done once it is delegated", crate::after::names(d)) } else { String::new() };
             (shown_of(t.s("id")), format!("{}: added{}{on}{}{dropped}", t.s("id"), if crate::chat_only::is_chat(&t) { " as chat only" } else if is_research(&t) { " as research only" } else { "" }, title_note(&rest(1))))
         }
+        "status" => super::status::status(flags.b("all")),
         "list" | "ls" if flags.b("pinned") => { let keys = repo_keys(); super::pins::list(board(true), &|t| line(t, &keys), &brief) }
         "list" | "ls" => {
             let q = flag("query").unwrap_or_default().trim().to_lowercase(); // a task is found by its number and its tag too: 134, #134, hsw-134
