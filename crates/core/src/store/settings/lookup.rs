@@ -1,5 +1,5 @@
 //! The one lookup. A work setting is looked up in one order and the nearest answer wins:
-//!   this task -> your entry for this repo -> you -> the repo's own file -> built in
+//!   this task -> its route (store/route.rs) -> your entry for this repo -> you -> the repo's own file -> built in
 //! A board setting is yours only: you -> built in. A repo's own fact (its key) is said for that repo only: your entry
 //! for the repo -> the repo's own file, as it is in the repo's folder now -> built in. A coordinator's setting:
 //! this time -> this coordinator -> you -> built in (coord.rs). No setting has a lookup of its own. A setting is read when its step starts: callers ask here at that moment and keep nothing.
@@ -57,6 +57,8 @@ pub fn places_of(scope: &Scope, mine: &Mine) -> Places {
             Value::Object(s)
         } else { t.at("settings").clone() };
         work.push(Place::now("task", "this task", held(&said, "this task")));
+        // Its route: the catalog's entry it was given, under what the task itself says (store/route.rs).
+        if let Some((values, from)) = crate::store::route::place_of(t) { work.push(Place::now("routed", from, values)); }
     }
     // Carried with the task from another machine: that machine's "you" and its entry for the repo, already worked out.
     if let Some(c) = task.filter(|t| t.b("carried")).map(|t| t.at("carried")) {

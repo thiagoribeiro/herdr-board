@@ -53,7 +53,8 @@ static LAST: Mutex<Option<(String, Arc<Mine>)>> = Mutex::new(None);
 pub fn yours() -> Arc<Mine> {
     use std::os::unix::fs::MetadataExt;
     let f = config_file();
-    let mark = std::fs::metadata(&f).map(|m| format!("{}|{}|{}|{}.{}|{}.{}", f.display(), m.ino(), m.size(), m.mtime(), m.mtime_nsec(), m.ctime(), m.ctime_nsec())).unwrap_or_default();
+    // With the catalog's mark: a value naming a program is checked against the programs it allows (allow.agents).
+    let mark = std::fs::metadata(&f).map(|m| format!("{}|{}|{}|{}.{}|{}.{}|{}", f.display(), m.ino(), m.size(), m.mtime(), m.mtime_nsec(), m.ctime(), m.ctime_nsec(), crate::agents::models::catalog::mark())).unwrap_or_default();
     if let Some((m, out)) = LAST.lock().unwrap().as_ref() { if !mark.is_empty() && *m == mark { return out.clone(); } }
     let out = Arc::new(read_yours());
     *LAST.lock().unwrap() = Some((mark, out.clone()));

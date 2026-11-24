@@ -15,6 +15,7 @@ pub mod rules_autopilot;
 pub mod rules_news;
 pub mod rules_notes;
 pub mod rules_place;
+pub mod rules_route;
 pub mod sidebar;
 pub mod state;
 pub mod who;

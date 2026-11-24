@@ -126,6 +126,8 @@ fn check_agent(e: &Entry, v: &Value) -> Res<Value> {
         if !ok { return refuse(format!("{}: \"{}\" is not a model name.", e.name, n.model)); }
     }
     if let Some(why) = refusal(&e.name, &k, !n.model.is_empty()) { return refuse(why); }
+    // The programs your catalog allows (`allow.agents` in models.toml): any other is refused wherever it is named.
+    if let Some(why) = crate::agents::models::allow::refusal(&e.name, &k) { return refuse(why); }
     Ok(json!(if n.model.is_empty() { k } else { format!("{k}/{}", n.model) }))
 }
 fn split_words(s: &str) -> Vec<String> { s.split(|c: char| c.is_whitespace() || c == ',').filter(|x| !x.is_empty()).map(String::from).collect() }
@@ -281,20 +283,5 @@ pub fn command_of(v: &Value) -> String { let s = text(v); if s.is_empty() || s =
 pub fn list_of(v: &Value) -> Vec<String> { strings(v) }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn values() {
-        assert_eq!(check("review.rounds", &json!("5"), "").unwrap(), json!(5));
-        assert_eq!(check("limit.tokens", &json!("2000k"), "").unwrap(), json!("2m"));
-        assert_eq!(check("limit.time", &json!("none"), "").unwrap(), json!("none"));
-        assert!(check("limit.time", &json!("2 hours"), "").unwrap_err().msg.contains("Did you mean 2h?"));
-        assert_eq!(check("worker.fallback", &json!("codex, claude/claude-opus-5-5"), "").unwrap(), json!(["codex", "claude/claude-opus-5-5"]));
-        assert_eq!(check("attempts.by", &json!("claude, codex"), "").unwrap(), json!("claude, codex"));
-        assert!(check("revew.rounds", &json!(1), "").unwrap_err().msg.contains("review.rounds"));
-        assert_eq!(tokens_say(1_500_000.0), "1.5m");
-        assert_eq!(tokens_say(500_000.0), "500k");
-        assert_eq!(check("repo.key", &json!("hsw"), "").unwrap(), json!("HSW"));
-        assert!(check("worker.access", &json!("ask"), "pi").is_err());
-    }
-}
+#[path = "values_tests.rs"]
+mod tests;

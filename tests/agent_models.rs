@@ -10,6 +10,9 @@ use sw::agents::models::say::models_command;
 use sw::store::settings::change::set_value;
 use sw::store::settings::lookup::{setting_text, Scope};
 
+/// The catalog of models and a task's route: the catalog checked, the programs it allows, a route as a place of its own.
+mod route_catalog;
+
 fn has(text: &str, re: &str) -> bool { regex::Regex::new(re).unwrap().is_match(text) }
 fn refused(name: &str, value: &str, re: &str) { let e = set_value(name, &json!(value), &Scope::you()).unwrap_err(); assert!(has(&e.msg, re), "{name} {value}: {re}: {}", e.msg); }
 fn taken(name: &str, value: &str) { set_value(name, &json!(value), &Scope::you()).unwrap_or_else(|e| panic!("{name} {value}: {}", e.msg)); assert_eq!(setting_text(name, None), value); }

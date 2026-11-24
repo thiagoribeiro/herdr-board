@@ -126,6 +126,100 @@ that at the end of the turn and never leaves the task in the agent with only its
   one does not have it. A start goes by the levels the program said last: it never waits to ask.
 - `<role>.fast` is Codex's faster service tier. Elsewhere it does nothing.
 
+## Catalog and routing
+
+**A task can be given an entry of a catalog of models, picked for it before it starts: a cheap one for a typo, a strong
+one for a hard refactor.** The entry is the task's program, model and effort for the whole of an agent's session; when
+its work fails review, the next entry of the catalog takes the task over, in the same worktree. Trivial work stops
+paying for the strongest model, and hard work gets more effort.
+
+```
+herdr-board models catalog            the catalog as the board reads it: each entry, its cost, how it fared lately
+herdr-board models catalog --init     write the board's example to ~/.herdr-board/models.toml, to change
+herdr-board models stats [--since 30d]   routed tasks by entry: tokens, cost, reviews failed, escalations
+herdr-board set route.mode coordinator   the Coordinator routes each task it adds or delegates
+```
+
+### The catalog
+
+`~/.herdr-board/models.toml` is yours. Until it is there the board's example is the catalog (three Claude entries,
+`leve`, `padrao` and `pesado`, with entries for other programs left in comments to adjust to what you have). Each
+`[[entry]]`:
+
+| key | what it is |
+|---|---|
+| `name` | one word, what `--route` names |
+| `agent` | a program with an optional model after a slash, as `worker.agent` takes it (`claude/sonnet`) |
+| `effort` | one its program takes, or `default` |
+| `cost` | its relative cost, on any scale (1, 3, 10) |
+| `good_for`, `avoid_for` | free words, in any language: what the Coordinator reads to choose it, or not |
+| `escalate_to` | the entry that takes over when this one's work fails review, or it cannot go on |
+| `max_files`, `max_minutes` | optional: roughly how big a task it is for, a sign for the Coordinator |
+
+An entry is checked as `set worker.agent` checks a value: a program that is not one, a model its program does not take,
+an effort it does not have, an unknown key, an `escalate_to` to no entry or in a circle. An entry that fails is named,
+with why, by `models catalog`, and is not used.
+
+**`allow.agents`** (`[allow] agents = ["claude"]`) is the list of programs allowed here. Without it every program is.
+With it, any other is refused wherever it is named: an entry, a setting (`set worker.agent codex`), a fallback,
+`attempts.by`, `--worker.agent`. A value a hand wrote in your settings that names one does not count (`show` says so),
+and a built-in default that names one, such as `reviewer.agent codex`, is not started: `show` marks it
+(`refused when it starts: …`), and the review fails with the same words until you set another. A file that is not
+valid TOML counts for nothing but its `allow.agents` line, so a slip elsewhere never lets every program in again.
+
+### Routing: `route.mode`
+
+`none` (the default): nothing is routed; every task works on `worker.agent`, and the Coordinator never chooses a model
+of its own.
+
+`coordinator`: for a task the Coordinator adds or delegates with no model named by you, it reads the catalog
+(`models catalog`, with each entry's last 30 days beside it) and chooses one entry by its `good_for` and `avoid_for`,
+with the reason in a line: `board add "…" --route padrao --route.reason "refator pequeno, 2 arquivos"`. It never
+leaves the catalog. The router is the Coordinator itself: no extra model is called.
+
+The board makes the entry the task's settings, as a place of their own just under the task's own (`show <id>` says
+where each came from):
+
+```
+  worker.agent     claude/sonnet  routed: padrao — "refator pequeno, 2 arquivos"
+  worker.effort    medium         routed: padrao — "refator pequeno, 2 arquivos"
+  worker.fallback  claude/opus    routed: padrao — "refator pequeno, 2 arquivos"
+```
+
+- **What you name wins.** "Com opus" is `--worker.agent claude/opus`, the task's own setting, set before or on the same
+  `add` or `delegate`: `--route` given with it says it was not used and keeps no route, so `models stats` does not count
+  it.
+- **The plan and the review are not routed.** The review stays on `reviewer.agent`: the strong check is what makes a
+  cheap worker safe. A plan written by a planner of its own (`plan.agent`) stays on it, and the build is routed. A plan
+  written by the working agent (`plan.approve` with `plan.agent none`, the default) is not routed, and since that
+  agent's conversation goes on into the build, the task is not routed at all: `--route` says it was not used, and
+  `route.default` is not given to it.
+- **Tasks the board starts by itself** (an automation, autopilot, a task chained with `--after`) get `route.default`,
+  an entry or `none`, under `route.mode coordinator`: no model is asked. An entry the catalog does not have is refused
+  when it is set; one the catalog lost since is marked in `show` (`not used: …`). An automation can name its own:
+  `automations add … --route leve` (its `route.default`), which counts whatever `route.mode` says.
+  A coordinator on autopilot may pass `--route` only where its `autopilot.mayChange` allows `worker.agent`: a route
+  sets the task's program; otherwise its answer says it was not applied, and `route.default` is used.
+- The model stays the same for the whole of an agent's session: changing it midway would lose its context.
+
+### Escalation
+
+A routed task's `worker.fallback` is the chain of its entry's `escalate_to`. The next entry takes over as any fallback
+does ([the fallback agent](fallback.md)): in the same worktree and pane, with the task, its commits, the last words of
+the one before and the open findings, never in the middle of a session. With its own effort.
+
+It happens earlier than for other tasks: after `route.escalateAfter` failed reviews (1 by default), not after
+`review.rounds`. The last entry of the chain has the usual `review.rounds`. A provider that is down, a lost login or no
+allowance hand it over too, as for any task. A new delegation starts on the first entry again.
+
+### Measuring
+
+For each routed task the board keeps the entry chosen, the reason, who chose it, and each escalation (`details <id>`,
+`route`); its tokens are counted as for `limit.tokens`, whether or not a limit is set. `models stats` adds them up by
+the entry first chosen: how many tasks, tokens per task, the entry's cost and the cost in all, the share whose review
+failed, the share that escalated, and the repos where an entry escalated most (`leve: escalated 40% in web`). The
+catalog shows the Coordinator a line of it per entry, to choose better.
+
 ## A new program
 
 How a program's models are listed and read is one entry in its row of the table of programs

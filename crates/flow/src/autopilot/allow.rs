@@ -66,7 +66,8 @@ pub fn guard(cmd: &str, pos: &[String], flags: &Obj, agent: Option<(&Obj, &str)>
             if !under_way(&t) && under_way_count(&ap, &board) as i64 >= super::record::count(&co, "autopilot.tasksAtOnce") { return refused(&format!("delegate {}", t.s("id")), "Its tasks at once are full (autopilot.tasksAtOnce)."); }
             // The settings it gives a task are those `autopilot.mayChange` allows, as on `add`; never merge.*, limit.*.
             let may = words(&co, "autopilot.mayChange");
-            let mut named: Vec<String> = flags.keys().filter(|k| k.contains('.')).cloned().collect();
+            let mut named: Vec<String> = flags.keys().filter(|k| k.contains('.') && *k != "route.reason").cloned().collect();
+            if flags.has("route") { named.push("worker.agent".into()); } // a route sets its program (store/route.rs)
             if flags.has("research") { named.push("research.only".into()); }
             if flags.has("chat") { named.push("chat.only".into()); }
             if let Some(n) = named.iter().find(|n| !crate::store::settings::pilot_values::may_change(&may, n)) { return refused(&format!("delegate {} --{n}", t.s("id")), "It may give a task only the settings autopilot.mayChange allows, and never merge.*, limit.* or autopilot.*."); }
