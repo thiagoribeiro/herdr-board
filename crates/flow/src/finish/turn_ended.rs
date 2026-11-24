@@ -140,7 +140,7 @@ fn finish_steps(id: &str, g: &mut Guard, mut t: Task, ev: Option<Value>, force: 
         let says = newer(turn.as_ref(), &t) && turn.as_ref().map(|x| x.pos > t.i("armedAt") && ((x.finished && x.id != t.at("handled").s("msg")) || !x.error.is_empty())).unwrap_or(false);
         match &a {
             // the agent exited: a crash still shows its real last error, else its screen's last words are the error
-            None => { if !says && fresh_note.is_none() { turn = Some(exited(&api, &pane)); } }
+            None => { if !says { turn = if fresh_note.is_some() { None } else { Some(exited(&api, &pane)) }; } }
             Some(a) if !says => {
                 if turn.as_ref().map(|x| x.finished && x.id == t.at("handled").s("msg")).unwrap_or(false) && fresh_note.is_none() { let c = comp.clone(); let _ = update_wait(id, 10000, |t| { t.obj_mut("handled").put("comp", c.clone()); Ok(Change::Write) }); return Ok(()); } // a late "idle" for a turn already handled
                 if a.s("agent_status") == "unknown" && fresh_note.is_none() { return Ok(()); } // herdr cannot tell, and nothing says it stopped

@@ -2,7 +2,7 @@
 //! follows up on (`followUp`), its id, title, closing note and last review's findings, and the pull request and merge
 //! commit where its work merged (its branch where it did not), or the report where it was research. What it waited for
 //! is taken when the wait ends and kept on the task (`afterDone`), so a clean-up of the task before it loses nothing of
-//! it. A coordinator hears of a task that ended in the same words (coordinator/ended.rs).
+//! it. Original evidence stays in the task; coordinator delivery is handled separately by digest.rs.
 use super::{after_of, say, stand_of, Stand};
 use crate::clock::now;
 use crate::flow::task::note_stat;
