@@ -38,21 +38,32 @@ fn a_task_with_no_change_past_stall_after_is_stalled_on_its_row_its_sidebar_and_
     assert!(row(&id).at("stall").is_null());
 }
 
+/// Main at the remote changes the file the task changed: GitHub says its pull request conflicts.
+fn main_conflicts(w: &World, id: &str) {
+    std::fs::write(w.root.join("f.txt"), "main\n").unwrap();
+    git(&w.root, &["add", "-A"]); git(&w.root, &["commit", "-qm", "main: f.txt"]); git(&w.root, &["push", "-q", "origin", "HEAD:main"]);
+    w.gh_says(json!({ "view": conflicting(task(id).at("prHead")) }));
+}
+
 #[test]
-fn a_pull_request_in_conflict_goes_back_to_its_agent_by_itself() {
+fn a_pull_request_in_conflict_goes_back_to_its_agent_by_itself_as_every_conflict_does() {
     let w = pr_world(json!({}));
     let id = to_approval(&w, "Conflicted");
-    w.script(json!({ "worker": [{ "note": "Merged main in." }] }));
-    w.gh_says(json!({ "view": conflicting(task(&id).at("prHead")) }));
+    w.script(json!({ "worker": [{ "status": "working" }] }));
+    main_conflicts(&w, &id);
     poll_prs();
-    let t = task(&id);
+    let t = settle(&id);
     assert!(t.b("prConflict"));
+    // the board's own sync found it and sent it, as the conflict of any other merge: its words, its count
     let last = prompts(&w, t.at("link").s("pane")).last().cloned().unwrap_or_default();
-    assert!(last.contains("conflicts with main") && last.contains("git merge origin/main"), "{last}");
-    assert_eq!(t.i("prRounds"), 1);
+    assert!(last.contains("conflicts with origin/main") && last.contains("f.txt"), "{last}");
+    assert_eq!((t.s("stage"), t.i("syncRepairs")), ("working", 1));
+    assert_eq!(event_of(&t), "conflict");
+    assert_eq!(sw::shown::turn::whose(&sw::shown::states::as_row(&row(&id))), "agent");
     // GitHub says it merges cleanly again: the conflict is over
     let mut ok = none(task(&id).s("prHead")); ok["mergeable"] = json!("MERGEABLE");
     w.gh_says(json!({ "view": ok }));
+    sw::store::tasks::patch(&id, |t| { t.put("stage", "approval"); }).unwrap();
     poll_prs();
     assert!(!task(&id).b("prConflict"));
 }
@@ -62,12 +73,12 @@ fn with_fix_conflicts_off_a_conflict_waits_for_you_with_the_reason_and_is_a_noti
     let w = pr_world(json!({ "merge.fixConflicts": false }));
     let id = to_approval(&w, "Held");
     let before = prompts(&w, task(&id).at("link").s("pane")).len();
-    w.gh_says(json!({ "view": conflicting(task(&id).at("prHead")) }));
+    main_conflicts(&w, &id);
     poll_prs();
-    let t = task(&id);
-    assert_eq!(t.s("stage"), "approval");
+    let t = settle(&id);
+    assert_eq!(t.s("stage"), "failed");
     assert_eq!(prompts(&w, t.at("link").s("pane")).len(), before, "nothing sent");
-    assert_eq!(t.at("prFailure").s("title"), "Pull request conflicts with main");
+    assert_eq!(t.at("failure").s("title"), "Merge conflict with main");
     assert!(says(&id).starts_with("Pull request conflicts with main"), "{}", says(&id));
     assert_eq!(event_of(&t), "conflict");
     assert_eq!(sw::shown::turn::whose(&sw::shown::states::as_row(&row(&id))), "you");

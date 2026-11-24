@@ -1,25 +1,24 @@
-//! Whose turn a task is and its next step, for `herdr-board status` (docs/status.md): you, its agent, the board or
-//! GitHub, and the next step in one sentence, from the row as the board shows it (flow/live.rs) and nothing else.
+//! Whose turn a task is and its next step, for `herdr-board status` (docs/status.md): herdr's sidebar's own answer
+//! (states.rs: `who_stands`), with what only a turn says on top: a stalled task is yours to look at, a merge that waits
+//! for its checks is GitHub's, a retry the board does by itself is the board's.
+use super::queue::queued;
 use super::row_says::sentence;
-use super::states::{as_row, in_review, needs_you, standing, under_review};
-use super::words::pr_number;
+use super::states::{as_row, in_review, standing, who_stands};
+use super::words::{age, pr_number};
 use crate::json::*;
+use crate::status_words::who::{AGENT, BOARD, GITHUB, REVIEWER, YOU};
 use crate::store::retries::waiting_of;
 
-pub const YOU: &str = "you";
-pub const AGENT: &str = "agent";
-pub const BOARD: &str = "board";
-pub const GITHUB: &str = "github";
-/// Whose move it is: the board's while it retries by itself, GitHub's while a merge waits for its checks.
+/// Whose move it is: `you`, `agent` (its reviewer too), `board` or `github`. `r`: a row (as_row).
 pub fn whose(r: &Obj) -> &'static str {
+    if r.at("stall").s("event") == "stalled" { return YOU; }
     if r.s("stage") == "merging" && r.b("checksWait") { return GITHUB; }
-    if waiting_of(r).is_some() || r.at("stall").s("event") == "unreachable" { return BOARD; }
-    if needs_you(r) || r.s("stage") == "approval" || r.s("stage") == "progress" { return YOU; }
-    if under_review(r) || r.s("stage") == "working" { return AGENT; }
-    BOARD
+    if waiting_of(r).is_some() || r.at("stall").s("event") == "unreachable" || queued(r) { return BOARD; }
+    match who_stands(r).0.as_str() { AGENT | REVIEWER => AGENT, BOARD => BOARD, _ => YOU }
 }
-/// The next step, in one sentence: "approve PR#64 · Pass · 1 minor", "Waiting for GitHub checks · 0 of 1 passed".
+/// The next step, in one sentence: "delegate it", "approve PR#64 · Pass · 1 minor", "No change for 14h · Finishing".
 pub fn next_step(r: &Obj) -> String {
+    if r.s("stage") == "todo" { return "delegate it".into(); }
     let said = sentence(r).text();
     if in_review(r) && !r.b("stall") {
         let what = if r.b("pr") { pr_number(r) } else { "the merge".into() };
@@ -30,6 +29,6 @@ pub fn next_step(r: &Obj) -> String {
 /// One task's line of `status`, as data: `t` is a task as the board shows it.
 pub fn status_of(t: &Obj, now: i64) -> Value {
     let r = as_row(t);
-    json!({ "id": r.at("id"), "title": r.at("title"), "stage": r.at("stage"), "state": standing(&r), "since": r.at("at"), "for": super::words::age(now - r.i("at")),
+    json!({ "id": r.at("id"), "title": r.at("title"), "stage": r.at("stage"), "state": standing(&r), "since": r.at("at"), "for": age(now - r.i("at")),
         "whose": whose(&r), "next": next_step(&r), "stall": r.at("stall") })
 }

@@ -70,8 +70,12 @@ pub fn handed(id: &str) -> Value {
     o.put("id", id); o.put("done", e.s("stand") == "done"); o.put("machine", id.split(':').next().unwrap_or(""));
     Value::Object(o)
 }
-/// A clock time as the row says it: `10:42`, this machine's time zone.
-pub fn clock(ms: i64) -> String { chrono::DateTime::from_timestamp_millis(ms).map(|d| d.with_timezone(&chrono::Local).format("%H:%M").to_string()).unwrap_or_default() }
+/// A clock time as the row says it: `10:42`, this machine's time zone; `Nov 23 10:42` on another day than today.
+pub fn clock(ms: i64) -> String {
+    let local = |ms: i64| chrono::DateTime::from_timestamp_millis(ms).map(|d| d.with_timezone(&chrono::Local));
+    let (Some(d), Some(today)) = (local(ms), local(crate::clock::now())) else { return String::new() };
+    d.format(if d.date_naive() == today.date_naive() { "%H:%M" } else { "%b %d %H:%M" }).to_string()
+}
 /// The machines of `left` that did not answer, said: "waiting for vm-str: not reachable since 10:42".
 pub fn unreachable(left: &[String]) -> Option<String> {
     if !left.iter().any(|i| is_far(i)) { return None; }

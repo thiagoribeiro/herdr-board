@@ -34,4 +34,20 @@ fn status_says_each_active_task_whose_turn_it_is_and_its_next_step() {
     let (v, text) = status(&w, true);
     assert_eq!(v.as_array().map(|a| a.len()), Some(2), "{text}");
     assert!(text.contains("PRJ-2"), "{text}");
+    // a task nobody started is yours to delegate, as herdr's sidebar has it
+    let todo = w.add("New one");
+    let r = status(&w, false).0.as_array().unwrap().iter().find(|r| r.s("id") == todo).cloned().unwrap();
+    assert_eq!((r.s("whose"), r.s("next")), ("you", "delegate it"));
+}
+
+#[test]
+fn a_task_stalled_in_finishing_is_yours_to_look_at_not_its_agents() {
+    let w = world();
+    let id = to_approval(&w, "Stuck");
+    sw::store::tasks::patch(&id, |t| { t.put("stage", "working"); }).unwrap();
+    sw::clock::advance(14 * 3600000);
+    let (v, text) = status(&w, false);
+    let r = &v[0];
+    assert_eq!((r.s("whose"), r.s("for"), r.at("stall").s("event")), ("you", "14h", "stalled"), "{text}");
+    assert!(r.s("next").starts_with("No change for 14h"), "{text}");
 }

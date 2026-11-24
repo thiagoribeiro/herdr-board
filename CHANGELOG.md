@@ -10,8 +10,9 @@
   a pull request GitHub finds in conflict with main, main that cannot be fetched (with the time of the last try). Its
   row, Herdr's sidebar and `status` say why, and `board.notify` hears `stalled` and `conflict`
   ([troubleshooting](docs/troubleshooting.md#a-task-is-stalled)).
-- A pull request in conflict with main goes back to its agent by itself, as a review round does (`merge.fixConflicts`,
-  on by default).
+- A conflict with main, found by the board's own merge or reported by GitHub on the pull request (which now starts that
+  merge at once), goes back to its agent by itself, as before; `merge.fixConflicts` (on by default) turned off, it waits
+  for you instead.
 - Fixed: a pull request merged on GitHub while its task still said "working" was never seen; the task now goes to done,
   and `board.notify` hears `merged outside`.
 - Fixed: an agent whose program exited in the middle of its turn (after "API Error: Connection lost mid-response") stayed

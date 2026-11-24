@@ -145,8 +145,8 @@ The events go to `board.notify` as any other one, in `HERDR_BOARD_EVENT`, once e
 - **An agent cut off by its provider or its connection** ("API Error: Connection lost mid-response"), also when its
   program exited on it: the board waits, then tells it to carry on (starting it again if it exited), with growing waits.
   Only after the last try is it yours ([a turn cut off by the provider](provider-errors.md)).
-- **A pull request in conflict with main** goes back to its agent, as a review round does (within `review.rounds`): it
-  brings main in, resolves and finishes again ([below](#a-pull-request-conflicts-with-main)).
+- **A conflict with main** goes back to its agent, as every conflict the board finds does (within `review.rounds`): it
+  brings main in, resolves and finishes again (`merge.fixConflicts`, [below](#a-pull-request-conflicts-with-main)).
 - **Everything else that needs a decision** waits for you, with the reason.
 
 **A stalled task**: `Finishing` for long is a turn whose end the board missed: `Ctrl+L` (`herdr-board finish <id>`).
@@ -155,11 +155,15 @@ nothing: go into it (`Enter`) and look.
 
 ### A pull request conflicts with main
 
-Main moved under the pull request and GitHub cannot merge it any more. With `merge.fixConflicts` on (the default) the
-board sends it back to the task's agent, which merges main into its branch, resolves the conflicts and finishes again;
-the check and the review then run as usual. With it off, or once `review.rounds` is used up, the task waits for you as
-`Pull request conflicts with main`: `Ctrl+R` sends it to the agent, or resolve it yourself in the task's worktree. The
-row goes back to normal once GitHub says the pull request merges cleanly.
+Main moved under the task's branch and it no longer merges. The board finds that by its own merge of main (whenever
+main moves while the task waits for you, [how work gets done](how-work-gets-done.md#staying-current-with-main)), and
+GitHub says so on the pull request (`mergeable`): the row then says `Pull request conflicts with main`, and for a task
+at rest the board runs its own merge at once. Either way it is the same conflict, handled one way: with
+`merge.fixConflicts` on (the default) it goes back to the task's agent, which merges main into its branch, resolves the
+conflicts and finishes again, at most `review.rounds` times in a row; the check and the review then run as usual. With
+it off, or once those rounds are used up, the task waits for you with the conflicting files: `Ctrl+R` sends it to the
+agent, or resolve it yourself in the task's worktree. The row goes back to normal once GitHub says the pull request
+merges cleanly.
 
 ## A done task stays in Herdr's sidebar
 

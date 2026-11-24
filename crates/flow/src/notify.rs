@@ -14,10 +14,12 @@ pub fn event_of(t: &Obj) -> &'static str {
     if st == "done" && t.b("mergedOutside") { return "merged outside"; }
     if ["asks", "reviewneeds", "plan", "pick"].contains(&st) || (st == "stopped" && t.b("limitStop")) || (st == "after" && t.b("afterBlocked")) { return "needs you"; }
     if st == "attempts" { return if attempts_of(t).iter().any(|c| ["asks", "reviewneeds"].contains(&c.s("stage"))) { "needs you" } else { "" }; }
-    if st == "failed" || st == "nosummary" { return "failed"; }
-    // Stalled or in conflict (stall.rs); main out of reach is only said on its row, the board keeps trying.
+    if st == "approval" && (t.b("failure") || t.b("prFailure") || t.b("syncBlocked")) { return "needs you"; }
+    // Stalled or in conflict (stall.rs), a conflict held as a failure too; main out of reach is only said on its row,
+    // the board keeps trying.
     if let Some(x) = crate::stall::stall_of(t, now()).filter(|x| x.event != "unreachable") { return x.event; }
-    if st == "approval" { return if t.b("failure") || t.b("prFailure") || t.b("syncBlocked") { "needs you" } else { "ready to approve" }; }
+    if st == "failed" || st == "nosummary" { return "failed"; }
+    if st == "approval" { return "ready to approve"; }
     ""
 }
 fn noted(t: &Obj, event: &str) -> bool { t.at("notice").s("event") == event && (event.is_empty() || t.at("notice").s("stage") == t.s("stage")) }

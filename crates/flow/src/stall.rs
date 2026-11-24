@@ -20,8 +20,7 @@ pub fn stall_of(t: &Obj, now: i64) -> Option<Stall> {
     if t.b("prConflict") { return say("conflict", format!("Pull request conflicts with {}", main_word(t))); }
     let sb = t.at("syncBlocked");
     if sb.s("why").starts_with("main could not be fetched") {
-        let at = chrono::DateTime::from_timestamp_millis(sb.i("at")).map(|d| d.with_timezone(&chrono::Local).format("%H:%M").to_string()).unwrap_or_default();
-        return say("unreachable", format!("{} could not be fetched, last try {at}", main_word(t)));
+        return say("unreachable", format!("{} could not be fetched, last try {}", main_word(t), crate::after::far::clock(sb.i("at"))));
     }
     if !STALLS_IN.contains(&t.s("stage")) || t.i("at") == 0 { return None; }
     let (after, still) = (ms(setting("stall.after", Some(t)).as_str().unwrap_or("")), now - moved_at(t));

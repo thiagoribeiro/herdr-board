@@ -1,8 +1,7 @@
 //! Pull requests are watched: failed checks, a requested change or new feedback wake the agent; a merge made
 //! elsewhere marks the task done, also while its agent is still at work (`mergedOutside`: you merged it on GitHub,
-//! not the board). A conflict with main GitHub reports (`mergeable`) is kept as `prConflict` (stall.rs) and, under
-//! `merge.fixConflicts`, goes back to the agent as pull-request feedback does; the board's own sync (sync.rs) finds
-//! the ones of a task at rest too.
+//! not the board). A conflict with main GitHub reports (`mergeable`) is kept as `prConflict` (stall.rs); for a task at
+//! rest it starts the board's own sync at once, which finds it and handles it as every conflict (sync/conflict.rs).
 //! A task waiting on a login is the human's: pull-request feedback does not wake its agent until that is cleared.
 use crate::actions::finish_line::send_failure;
 use crate::clock::now;
@@ -40,7 +39,7 @@ fn unread(id: &str, said: &str) {
     if land { spawn_runner("land", id, &[]); }
 }
 #[derive(PartialEq)]
-enum Then { Nothing, Merged, Closed, Unreviewed, Land, Wake }
+enum Then { Nothing, Merged, Closed, Unreviewed, Land, Wake, Sync }
 
 fn poll_one(id: &str, pr: &str, j: &Value, via: &str) {
     let root = folder_of(id);
@@ -91,6 +90,7 @@ fn poll_one(id: &str, pr: &str, j: &Value, via: &str) {
         let conflict = j.s("mergeable") == "CONFLICTING";
         let known = j.s("state") == "OPEN" && ["CONFLICTING", "MERGEABLE"].contains(&j.s("mergeable")) && t.b("prConflict") != conflict;
         if known { t.put("prConflict", if conflict { json!(true) } else { Value::Null }); }
+        if known && conflict && crate::sync::resyncable(t) { then = Then::Sync; }
         if j.s("state") != "OPEN" || (t.s("stage") == "working" && !t.b("autoMerge")) || needs_login(t) { return Ok(if known { Change::Write } else { Change::Keep }); }
         if !checks.is_empty() { t.put("prChecksSeen", true); } // this pull request has checks: a later empty list is not "none"
         // A remembered merge is for the commit that was reviewed. The pull request has moved on (someone pushed to it):
@@ -125,13 +125,10 @@ fn poll_one(id: &str, pr: &str, j: &Value, via: &str) {
         t.put("prFeedbackSeen", feedback);
         let decision = j.s("reviewDecision");
         let reason = if !failed.is_empty() { checks::failed_why(pr, &failed) }
-            else if decision == "CHANGES_REQUESTED" { format!("A reviewer asked for changes on the pull request {pr}. Read the review (gh pr view --comments) and address it on your branch.") }
-            else if conflict { format!("The pull request {pr} conflicts with {main}. In your own worktree, bring {main} in (git fetch origin {main} && git merge origin/{main}), resolve the conflicts, commit, and finish again.", main = crate::sync::main_word(t)) } else { String::new() };
+            else if decision == "CHANGES_REQUESTED" { format!("A reviewer asked for changes on the pull request {pr}. Read the review (gh pr view --comments) and address it on your branch.") } else { String::new() };
         let why = if !reason.is_empty() { format!("{reason}{}", if others.is_empty() { "" } else { " Comments are also available for context (gh pr view --comments)." }) }
             else if new_feedback { format!("New feedback on the pull request {pr}. Read the comments (gh pr view --comments) and address what they ask for on your branch; if nothing needs changing, say so and finish.") } else { String::new() };
-        // A conflict and nothing else in the way: its own kind of blocker, sent back by itself only under `merge.fixConflicts`.
-        let conflict_only = conflict && failed.is_empty() && decision != "CHANGES_REQUESTED";
-        let blocking = !failed.is_empty() || decision == "CHANGES_REQUESTED" || conflict;
+        let blocking = !failed.is_empty() || decision == "CHANGES_REQUESTED";
         let all_good = checks.iter().all(|c| CHECK_GOOD.contains(&checks::word(c).as_str()));
         // The board's own wait for GitHub's checks (land/checks.rs): none is still running, one failed, or it waited
         // longer than `check.timeout`. The land step looks again and decides.
@@ -163,19 +160,19 @@ fn poll_one(id: &str, pr: &str, j: &Value, via: &str) {
         t.put("prState", if blocking { "failing" } else if passed && decision != "REVIEW_REQUIRED" { "passing" } else { "waiting" });
         // Keep the last remote blocker independently of local check/review success.
         if blocking {
-            let kind = if !failed.is_empty() { "checks" } else if conflict_only { "conflict" } else { "review" };
+            let kind = if failed.is_empty() { "review" } else { "checks" };
             let prev = t.at("prFailure");
             let known = if kind == "checks" { same(prev) } else { prev.s("detail") == why && prev.s("remoteKind") == kind && prev.s("head") == head };
             if !known {
                 let f = if kind == "checks" { checks::blocker(pr, &head, &failed, &format!("{detail}{}", if why.len() > reason.len() { format!("\n\n{}", why[reason.len()..].trim()) } else { String::new() })) }
-                    else { json!({ "stage": "pr", "remote": true, "remoteKind": kind, "head": head, "title": if kind == "review" { "Pull request changes requested" } else { "Pull request conflicts with main" }, "detail": why,
+                    else { json!({ "stage": "pr", "remote": true, "remoteKind": kind, "head": head, "title": "Pull request changes requested", "detail": why,
                     "next": "Address this on your own branch and finish again. Local checks do not prove remote CI passed; wait for a fresh remote result.", "agentCanFix": true, "at": now(), "sentAt": null }) };
                 t.put("prFailure", f);
             }
             if t.s("stage") == "approval" && !t.b("failure") { let m = format!("{}: {why} Send details to the agent, or wait for remote confirmation", t.at("prFailure").s("title")); t.put("msg", m); }
         } else if t.b("prFailure") {
             // Failed checks of an older commit are over once this one has none failing (#309).
-            let confirmed = match t.at("prFailure").s("remoteKind") { "review" => decision == "APPROVED", "conflict" => j.s("mergeable") == "MERGEABLE", _ => t.s("prState") == "passing" || checks::stale(t, &head) };
+            let confirmed = if t.at("prFailure").s("remoteKind") == "review" { decision == "APPROVED" } else { t.s("prState") == "passing" || checks::stale(t, &head) };
             if confirmed {
                 t.put("prFailure", Value::Null);
                 if t.s("stage") == "approval" && !t.b("failure") {
@@ -184,15 +181,14 @@ fn poll_one(id: &str, pr: &str, j: &Value, via: &str) {
             }
         }
         // A new commit failing again is news too: the agent hears of it, within its rounds.
-        let seen = if blocking { format!("{head}|{}|{decision}{}", failed.join(","), if conflict { "|conflict" } else { "" }) } else { String::new() };
+        let seen = if blocking { format!("{head}|{}|{decision}", failed.join(",")) } else { String::new() };
         if seen == t.s("prSeen") && !new_feedback { return Ok(Change::Write); }
         t.put("prSeen", seen);
         // Wakes the agent, in the background. Capped like the review loop, so the two cannot go round forever.
         if !why.is_empty() && then != Then::Land {
             let went = t.i("prRounds");
             if !blocking { for (k, v) in failure_patch(&obj(json!({ "stage": "pr", "title": "Pull request feedback", "detail": why, "next": "Address this on your own branch, run the checks and finish again for review and approval.", "agentCanFix": true, "auth": false }))) { t.insert(k, v); } }
-            let may = !conflict_only || setting("merge.fixConflicts", Some(t)) == json!(true);
-            if may && !t.b("autoMerge") && (went as f64) < number(&setting("review.rounds", Some(t))) && ["approval", "failed", "asks", "nosummary"].contains(&t.s("stage")) { t.put("prRounds", went + 1); then = Then::Wake; }
+            if !t.b("autoMerge") && (went as f64) < number(&setting("review.rounds", Some(t))) && ["approval", "failed", "asks", "nosummary"].contains(&t.s("stage")) { t.put("prRounds", went + 1); then = Then::Wake; }
             else if t.s("stage") == "approval" || t.b("autoMerge") {
                 let m = format!("{why} {}", if t.b("autoMerge") { "Auto-merge is blocked; send details to cancel pending auto-merge and repair safely" } else { "Automatic retries are exhausted; send details to the agent to try again" });
                 t.put("msg", m);
@@ -214,6 +210,7 @@ fn poll_one(id: &str, pr: &str, j: &Value, via: &str) {
         Then::Unreviewed => { tell_sidebar(&t); if legacy { gh(&["pr", "merge", &pr_number(pr), "--disable-auto"], &root, 60000); } }
         Then::Closed => tell_sidebar(&t),
         Then::Land => { spawn_runner("land", id, &[]); }
+        Then::Sync => { crate::runner::spawn_claimed("sync", id, &["--force"]); }
         Then::Wake => {
             let rounds = t.i("prRounds");
             if send_failure(id).is_ok() { let _ = update_wait(id, 10000, |t| { t.put("prRounds", rounds); Ok(Change::Write) }); } // a reply resets counters; this one is the plugin's

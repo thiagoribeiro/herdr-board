@@ -31,15 +31,15 @@ pub fn reconcile(t: &Task, api: &Herdr) {
         return upd(id, |t| { if t.at("last").b("gone") { return false; } let l = t.obj_mut("last"); l.put("gone", true); l.put("status", Value::Null); l.put("at", now()); true });
     };
     let Some(a) = agent else {
-        let mut mid_turn = false;
         upd(id, |t| {
             if t.at("last").has("status") == false && t.at("last").is_object() && !t.at("last").b("gone") && t.b("exitedAt") { return false; }
             let l = t.obj_mut("last"); l.put("status", Value::Null); l.put("gone", false); l.put("at", now());
-            if !t.b("exitedAt") { t.put("exitedAt", now()); mid_turn = t.s("stage") == "working" && !crate::runner::runner_alive(t); }
+            if !t.b("exitedAt") { t.put("exitedAt", now()); }
             true
         });
-        // Its program exited in the middle of its turn: the finish line says why, a passing error tried again by itself.
-        if mid_turn { crate::runner::spawn_runner("finish", id, &[]); }
+        // Its program exited in the middle of its turn, and no runner is on it: the finish line says why, a passing error
+        // tried again by itself. Looked at again each minute while it stays so (a runner on it at first, say).
+        if t.s("stage") == "working" && !crate::runner::runner_alive(t) && crate::store::marks::due(&format!("exited-{}", id.replace('/', "-")), 60000) { crate::runner::spawn_runner("finish", id, &[]); }
         return;
     };
     let cwd = cwd_of(t);
