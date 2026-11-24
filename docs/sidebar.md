@@ -5,7 +5,8 @@ title, who is on it and where it stands, and the percent and time to go. Not the
 it does (`Reading the list code`, the question itself): that stays on the board, and row 2 already says where it stands.
 
 There is one entry per live agent: a task's agent, its reviewer while a review runs, and the Coordinator. A task nobody
-is on (to do, done and cleaned up) has no pane in Herdr, so no entry.
+is on (to do, done and cleaned up) has no pane in Herdr, so no entry. The entries stand as a tree: each task under the coordinator that added it, and a task that waits for
+another under that one ([the tree](#the-tree-tasks-under-their-coordinator)).
 
 **A done task leaves the sidebar by itself**: once it is merged (here or on GitHub), finished with nothing to merge, or
 called done by you, its whole space closes. That is the setting `workspace.cleanup`, on unless you turned it off. A
@@ -81,6 +82,61 @@ when the row has no numbers.
   coordinator's pane or space is never a task's, whatever the task's old link says. After herdr restarts, the pane is
   the task's again once herdr shows the task's agent running in its new terminal.
 
+## The tree: tasks under their coordinator
+
+The entries stand as a tree, each task under the coordinator that added it, as `addedBy` names it in `details`:
+
+```
+ ○ ~ · Coordinator                         the Coordinator, in its tab of the home space
+   Coordinator · idle
+ ◐ ├─ BRD-2 Show the tree in the sid…      a task the Coordinator added
+   agent · working · 6m
+ ◐ ├─ BRD-2 Show the tree in the sid…      its reviewer: in the task's space, so right under its agent
+   reviewer · under review
+ ◐ │  └─ BRD-3 Document the tree           a task that waits for BRD-2 (--after), under it
+   agent · working · 2m
+ ◐ └─ BRD-5 Fix the hint line              the Coordinator's last task
+   agent · working · 1m
+ ◐ BRD-4 Rename the setting                a task you added: outside every tree, last
+   agent · working · 9m
+```
+
+- **Under which coordinator.** The one you asked to add it, or whose autopilot did: the Coordinator, the machine
+  coordinator or a project coordinator. Their trees come in that order: the Coordinator's, the machine's (both have
+  their tab in the home space `~`, the Coordinator's first), then each project's right after its repo's space.
+- **Your tasks** (added by you, or by an automation) stand outside every tree, after all of them, with no prefix: they
+  have no coordinator to stand under. Grouping them under a heading of their own was not possible: Herdr has no entry
+  that is not a pane or a space.
+- **A task that waits for another** (`--after`, [one task after another](after.md)) stands one level under the first
+  task it waits for that is in the same tree. A task it waits for that has no space any more (done and closed), or is
+  in another tree, puts it at the top of its own. Nothing loops: a wait in a circle draws each task once.
+- **The characters** are `├─ ` for a task with more below it at its level, `└─ ` for the last one, and `│  ` or three
+  spaces for each level above it: three cells a level, before the task's number. Four levels at most: a task deeper
+  than that stands at the fourth, beside the one it waits for, so that the tree is never more than 12 cells and the
+  number stays inside Herdr's default 26 cells. Herdr cuts a row at its end, so a narrow sidebar cuts the title, never
+  the number. The board's own list draws no tree: these are the sidebar's own.
+
+### What Herdr lets the board do here (checked on Herdr 0.9.5)
+
+- **No nesting of its own.** An entry is a pane, a space or a tab; nothing puts one entry under another, or indents
+  it. So the tree is drawn in the text of row 1, the name of the task's space, which Herdr keeps as written (leading
+  spaces and `├─` included). The same name heads the task's space in the spaces part of the sidebar, so the spaces
+  read as the same tree.
+- **The order is the spaces' order.** Herdr's agents list, sorted by space (`agent_panel_sort = "spaces"`, its default;
+  the header says `grouped`), lists each space's agents together, in the order of the spaces, and within a space in
+  the order of its tabs. The board puts the spaces in the tree's order with one `workspace.move_block` (Herdr's
+  socket): each coordinator's tasks right after the space its tab is in, yours at the end; every other space keeps its
+  place.
+- **Once per change.** The spaces are put in order when the tree changes (a task added to it, gone, moved under
+  another, a coordinator moved: where the coordinators are is looked at again every 10 seconds), not on every tick: a
+  space you drag by hand stays where you put it until then. A move Herdr refuses (an older Herdr) is not tried again
+  before the tree changes; the prefixes are written all the same.
+- **No tree in the `priority` sort.** With `agent_panel_sort = "priority"` under `[ui]` in Herdr's config (the list's
+  header says `priority`), Herdr orders the agents list by what needs you most and most recently, whatever the spaces'
+  order: a `└─` there would stand away from its task. So the board reads that setting (again every 10 seconds) and,
+  while it is `priority`, draws no tree: the spaces keep their plain names (`BRD-3 …`) and are not moved. For the tree,
+  set `agent_panel_sort = "spaces"` (or take the line out: it is Herdr's default); it comes within 10 seconds.
+
 ## With and without the plugin's sidebar rows
 
 Herdr's default sidebar shows a space's name, the tab's name and the agent's shown name, and no custom value. So:
@@ -124,7 +180,8 @@ entry: its space, its tab, its name.
 ## How it gets there
 
 - **One writer, no words of its own.** The board has one writer for all of it (`crates/flow/src/flow/sidebar.rs`). It
-  draws the task's row with the board's own code, without colours (`crates/flow/src/flow/sidebar_entry.rs`).
+  draws the task's row with the board's own code, without colours (`crates/flow/src/flow/sidebar_entry.rs`), and the
+  tree with `crates/flow/src/flow/sidebar_tree.rs`.
 - **When.** Whoever ticks (the keeper or an open board) writes an entry once a second when a word of it changed: as
   often as the board redraws its own rows. When a task comes to wait for you, goes wrong, is taken up again or ends,
   whatever did that writes the entry at once, without waiting for the tick.

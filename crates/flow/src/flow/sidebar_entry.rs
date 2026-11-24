@@ -16,7 +16,8 @@ use crate::store::settings::values::agent_of;
 pub const CAP: usize = 80;
 const SEP: &str = " · ";
 fn words(s: &str) -> String { crate::text::squash(&crate::store::failures::strip_ansi(s)) }
-fn cut(s: &str) -> String { let all: Vec<char> = s.chars().collect(); if all.len() <= CAP { s.to_string() } else { format!("{}…", all[..CAP - 1].iter().collect::<String>().trim_end()) } }
+/// A value as herdr keeps it: at most `CAP` characters, a longer one cut at its end with "…".
+pub fn cut(s: &str) -> String { let all: Vec<char> = s.chars().collect(); if all.len() <= CAP { s.to_string() } else { format!("{}…", all[..CAP - 1].iter().collect::<String>().trim_end()) } }
 /// A task's number and title as its row has them: `#152 Show automations…`. The number comes first and whole.
 pub fn task_name(t: &Obj) -> String {
     let tag = { let g = tag_of(t.s("id"), &repo_keys()); if g.is_empty() { t.t("id") } else { g } };
