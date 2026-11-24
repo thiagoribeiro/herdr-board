@@ -33,6 +33,8 @@ The working agent **cannot go on** in three cases:
    review after the last of those still fails, the next agent gets the work. Same for the repo's check: it goes back
    `review.rounds` times, and a check that fails after that is handed over. With `review.rounds 0` nothing goes back by
    itself, and nothing is handed over for a review or a check either: it waits for you.
+   A task routed to an entry of the catalog of models hands over sooner: after `route.escalateAfter` failed reviews, to
+   the entry it escalates to ([catalog and routing](models.md#escalation)).
 
 So for one turn that ends badly, the order is: **the board's own tries (only for an error that passes) → the next agent
 on `worker.fallback` → you.**
