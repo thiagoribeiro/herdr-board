@@ -2,6 +2,7 @@
 //! message keeps its own repo and tab choice, none it has not dealt with is dropped, and it can be turned on and off
 //! while the board is open.
 use crate::common;
+use crate::common::prompt_text as text;
 use common::board::open;
 use common::*;
 use serde_json::{json, Value};

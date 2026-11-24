@@ -2,6 +2,7 @@
 //! swallowed is pressed again, never the words again; words typed into a turn the Coordinator was in the middle of get
 //! their enter once it rests.
 use crate::common;
+use crate::common::prompt_text as text;
 use common::*;
 use serde_json::{json, Value};
 use sw::coordinator::{pump::tick, requests::send, state};

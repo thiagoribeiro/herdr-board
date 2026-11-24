@@ -22,7 +22,7 @@ pub fn git_root(folder: &Path) -> PathBuf {
     let start = absolute(folder);
     let mut d = start.clone();
     loop {
-        if d.join(".git").exists() { return d; }
+        if d.join(".git").is_file() || d.join(".git/HEAD").is_file() { return d; }
         if !d.pop() { return start; }
     }
 }

@@ -3,6 +3,7 @@
 //! program, and says in plain words what happened when it still could not. A start command stays under 1024 bytes.
 //! The same for a pane whose shell herdr does not see yet (issue #202): `agent_pane_busy`, "not an available shell".
 use crate::common;
+use crate::common::prompt_text as text;
 use common::*;
 use serde_json::{json, Value};
 use sw::json::*;

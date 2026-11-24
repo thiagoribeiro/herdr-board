@@ -16,8 +16,9 @@ pub fn able(role: &str) -> Vec<&'static str> { KIND_NAMES.iter().copied().filter
 /// Why this program cannot do this role (with a model, when `model`), or None when it can.
 pub fn why_not(k: &str, role: &str, model: bool) -> Option<String> {
     let a: &Kind = kind(k)?;
+    if role == "summary" && !["claude", "pi"].contains(&k) { return Some(format!("{k} has no verified tool-free summarizer mode; use claude or pi")); }
     if let Some((_, why)) = a.cannot.iter().find(|(r, _)| *r == role) { return Some(format!("{k} cannot {}: {why}.", role_words(role))); }
-    if role == "watcher" {
+    if role == "watcher" || role == "summary" {
         if !can_one_shot(k) { return Some(format!("{k} has no headless one-shot mode, so it cannot be the Watcher.")); }
         // The three's own one-shot (adapter.rs) takes a model.
         if model && a.headless.as_ref().map(|h| h.model.is_empty()).unwrap_or(false) { return Some(format!("{k} takes no model as the Watcher: leave the model out.")); }

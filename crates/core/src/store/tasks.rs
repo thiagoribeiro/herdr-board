@@ -101,6 +101,7 @@ pub fn update_wait(id: &str, wait_ms: i64, f: impl FnOnce(&mut Task) -> Res<Chan
         if let Change::Keep = f(&mut t)? { return Ok(t); }
         if t.s("stage") != before {
             t.put("at", now());
+            t.put("stageSince", now());
             if !STAGES.contains(&t.s("stage")) { crate::fail!("Unknown stage {}", t.s("stage")); }
         }
         write_json(&task_file(id), &Value::Object(t.clone()))?;

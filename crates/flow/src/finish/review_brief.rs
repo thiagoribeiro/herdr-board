@@ -22,7 +22,7 @@ pub fn review_brief(t: &Obj, b: &Brief) -> String {
     let known = if old.is_empty() { String::new() } else { format!("Already known to the human (they were there before this change): do not report these again, in these words or in others.\n{}", old.iter().map(|f| format!("- {}", gate::finding_line(f))).collect::<Vec<_>>().join("\n")) };
     let plan_rule = crate::plan::review_rule(t);
     let head = b.change.map(|c| c.t("head")).unwrap_or_default();
-    let desc: String = t.s("description").chars().take(3000).collect();
+    let desc = t.t("description");
     let said: String = b.text.chars().take(2000).collect();
     let where_ = if is_research(t) { review_rule(t) } else {
         format!("{} Read the changed files and what surrounds them. Then actually exercise the change: run it, run its tests, open it in a browser if it has a screen, try the awkward inputs. Check it against what was asked: does it do all of it, correctly? Does it break anything nearby? Ignore taste and style nits.",

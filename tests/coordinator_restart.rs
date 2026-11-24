@@ -2,6 +2,7 @@
 //! picked for a single use, the board itself neither restarts it nor starts a new one, and out of the box it is Claude
 //! Code on its defaults whatever the working agent is.
 use crate::common;
+use crate::common::prompt_text as text;
 use common::board::open;
 use common::*;
 use serde_json::{json, Value};

@@ -24,7 +24,7 @@ use sw::json::*;
 static ONE: Mutex<()> = Mutex::new(());
 pub fn one_at_a_time() -> MutexGuard<'static, ()> { ONE.lock().unwrap_or_else(|e| e.into_inner()) }
 static N: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
-pub struct World { pub base: PathBuf, pub root: PathBuf, pub fake: Rc<herdr::FakeHerdr>, pub gh: Rc<gh::FakeGh>, pub opener: Rc<opener::FakeOpener>, pub socket: String, _listen: std::os::unix::net::UnixListener, _one: MutexGuard<'static, ()> }
+pub struct World { pub base: PathBuf, pub root: PathBuf, pub fake: Rc<herdr::FakeHerdr>, pub gh: Rc<gh::FakeGh>, pub opener: Rc<opener::FakeOpener>, pub socket: String, _listen: Option<std::os::unix::net::UnixListener>, _one: MutexGuard<'static, ()> }
 #[derive(Default)]
 pub struct Opts { pub repo: bool, pub settings: Value, pub repo_settings: Option<Value>, pub origin: bool }
 pub fn git(cwd: &Path, a: &[&str]) -> String { worktrees::git(cwd, a).unwrap_or_else(|e| panic!("git {a:?}: {e}")) }
@@ -42,7 +42,11 @@ pub fn world_with(o: Opts) -> World {
     for k in ["HERDR_PANE_ID", "HERDR_TAB_ID", "HERDR_WORKSPACE_ID", "HERDR_PLUGIN_ID", "HERDR_PLUGIN_CONTEXT_JSON", "HERDR_ENV", "HERDR_SESSION", "TMUX", "NO_COLOR", "XDG_DATA_HOME", "HERDR_BOARD_DATA_DIR", "HERDR_BOARD_CONFIG_DIR", "HERDR_BOARD_REPORTS_DIR", "HERDR_BOARD_WEBUI", "HERDR_BOARD_PROGRESS", "HERDR_BOARD_SANDBOX", "HERDR_BOARD_BOXED", "HERDR_BOARD_RETRY_MS", "HERDR_BOARD_ENDED_MS", "HERDR_BOARD_QUIET_MS", "HERDR_BOARD_READY_MS", "HERDR_BOARD_SUBMIT_MS", "HERDR_BOARD_TICK_MS", "ELEVENLABS_API_KEY", "CLAUDE_CODE_TMPDIR", "HERDR_BOARD_SIZE"] { unsafe { std::env::remove_var(k) } }
     let socket = b("herdr.sock");
     // herdr's socket is there (the fake answers for herdr itself): what looks for a running herdr finds one.
-    let listen = std::os::unix::net::UnixListener::bind(&socket).unwrap();
+    let listen = match std::os::unix::net::UnixListener::bind(&socket) {
+        Ok(l) => Some(l),
+        Err(e) if e.kind() == std::io::ErrorKind::PermissionDenied => { std::fs::write(&socket, "fake socket").unwrap(); None }
+        Err(e) => panic!("test socket: {e}"),
+    };
     std::fs::create_dir_all(base.join("tmp")).unwrap();
     for (k, v) in [("HOME", b("home")), ("HERDR_BOARD_TMP", b("tmp")), ("HERDR_BOARD_HOME", b("sw")), ("HERDR_SOCKET_PATH", socket.clone()), ("XDG_CONFIG_HOME", b("home/.config")), ("XDG_STATE_HOME", b("home/.state")), ("XDG_DATA_HOME", b("home/.local/share")),
         ("CLAUDE_CONFIG_DIR", b("claude")), ("CODEX_HOME", b("codex")), ("PI_CODING_AGENT_DIR", b("pi")), ("HERDR_BOARD_CLAUDE_JSON", b("claude.json")), ("HERDR_BOARD_CODEX_TOML", b("codex.toml"))] { set(k, &v); }
@@ -56,7 +60,7 @@ pub fn world_with(o: Opts) -> World {
     let now = sw::clock::now();
     let versions: serde_json::Map<String, Value> = sw::agents::kinds::all().map(|k| (k.name.to_string(), json!({ "v": "9.9.9", "at": now, "found": true }))).collect();
     std::fs::write(data.join("versions.json"), Value::Object(versions).to_string()).unwrap();
-    let mut settings = json!({ "watcher.agent": "none", "coordinator.agent": "none" });
+    let mut settings = json!({ "watcher.agent": "none", "summary.agent": "none", "coordinator.agent": "none" });
     for (k, v) in o.settings.as_object().cloned().unwrap_or_default() { settings[k] = v; }
     std::fs::write(config.join("config.json"), settings.to_string()).unwrap();
     let root = base.join("proj");
@@ -126,7 +130,7 @@ pub fn read(p: &Path) -> String { std::fs::read_to_string(p).unwrap_or_default()
 pub fn pi_folder(cwd: &Path) -> String { let p = cwd.display().to_string(); format!("--{}--", p.strip_prefix('/').unwrap_or(&p).replace(['/', '\\', ':'], "-")) }
 /// The pane's agent, as the fake herdr has it now.
 pub fn agent_of(w: &World, pane: &str) -> Value { w.state().arr("panes").iter().find(|p| p.s("pane_id") == pane).map(|p| p.at("agent").clone()).unwrap_or(Value::Null) }
-pub fn prompts(w: &World, pane: &str) -> Vec<String> { agent_of(w, pane).arr("prompts").iter().map(text).collect() }
+pub fn prompts(w: &World, pane: &str) -> Vec<String> { agent_of(w, pane).arr("prompts").iter().map(prompt_text).collect() }
 /// The agent in this pane moves to `status`, as herdr would see it; then the hook looks.
 pub fn set_status(w: &World, pane: &str, status: &str) {
     w.patch(|s| { let seq = s.i("seq") + 1; s["seq"] = json!(seq); for p in s["panes"].as_array_mut().unwrap() { if p.s("pane_id") == pane { p["agent"]["status"] = json!(status); p["agent"]["seq"] = json!(seq); } } });
@@ -178,3 +182,6 @@ pub fn starts(w: &World) -> Vec<String> { w.state().arr("calls").iter().map(text
 /// Every call gh was asked, one per line.
 pub fn gh_log(w: &World) -> String { w.gh.log.borrow().iter().map(|l| format!("{l}\n")).collect() }
 pub fn calls(w: &World) -> Vec<String> { w.state().arr("calls").iter().map(text).collect() }
+
+/// Prompt text for assertions about human words; the raw fake transcript still keeps the full context envelope.
+pub fn prompt_text(v: &Value) -> String { sw::coordinator::context::bare(&sw::json::text(v)) }

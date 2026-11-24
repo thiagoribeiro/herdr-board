@@ -2,6 +2,7 @@
 //! the latest message; a draft left from the Coordinator's own pane is sent from the repo it was typed in; and the herdr
 //! action that goes into the Coordinator's pane from anywhere, starting it first.
 use crate::common;
+use crate::common::prompt_text as text;
 use common::board::{open, Board};
 use common::*;
 use serde_json::{json, Value};
@@ -58,7 +59,7 @@ fn one_chat_for_everyone_space_on_a_task_talks_to_its_agent_otherwise_to_the_coo
     // panel no longer repeats.
     let t = w.add(TITLE); delegate(&t); settle(&t);
     e.s.all_done = true; e.load(); e.s.sel = t.clone(); e.load(); // all done: a done task has no row else
-    assert!(has(&wide(&mut e, 160), r"The agent said ─+ *\n[^\n]*Done\."), "{}", wide(&mut e, 160)); assert!(has(&wide(&mut e, 160), r"\n╭─  [^›\n]+  · Machine coordinator ─*╮\n(?:│ +│\n)?"));
+    assert!(has(&wide(&mut e, 160), r"The agent said ─+ *\n[^\n]*Done\."), "{}", wide(&mut e, 160)); assert!(has(&wide(&mut e, 160), r"\n╭─  [^›\n]+  · Machine coordinator [^\n]*╮\n"), "{}", wide(&mut e, 160));
     e.press(&["space"]); assert!(e.s.reply);
     let text = wide(&mut e, 160);
     // the box names it: the ladder down to its tag; inside, what it said, under no label

@@ -68,7 +68,7 @@ fn the_two_settings_nearest_first_delegate_show_an_automation_and_never_from_a_r
     L::set_setting(a.s("id"), "plan.approve", &json!("you")).unwrap();
     assert_eq!(sw::store::automations::automation(a.s("id")).unwrap().at("settings").s("plan.approve"), "you");
     // The Coordinator's standing rules say it in plain words.
-    let said = sw::coordinator::rules::rules("board");
+    let said = sw::coordinator::rules::reference_of(&sw::coordinator::co::Co::top(""), "board");
     for want in ["\"show me the plan first\"", "board delegate <id> --plan.approve you", "--plan.agent claude/claude-opus-5-5"] { assert!(said.contains(want), "{want}"); }
 }
 

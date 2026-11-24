@@ -35,7 +35,7 @@ fn the_humans_notes_are_read_only_and_its_own_folder_inside_them_has_an_index() 
     assert!(r.contains(&format!("- Your own notes: {} is yours", own.display())) && r.contains(&format!("{} lists them", own.join("index.md").display())), "{r}");
     assert!(r.contains("Read it at the start of every conversation") && r.contains("Never write a secret"), "{r}");
     assert!(r.contains(&format!("The board and your own notes folder ({}) are your only memory", own.display())), "{r}");
-    assert!(r.contains("coordinator.notes (a folder of the human's own notes you read)"), "{r}");
+    assert!(sw::coordinator::rules::reference_of(&Co::top(&w.socket), "board").contains("coordinator.notes (a folder of the human's own notes you read)"));
 }
 
 #[test]

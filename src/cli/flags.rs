@@ -54,6 +54,8 @@ fn takes(cmd: &str, sub: &str) -> Option<Takes> {
         "run" => f(&["force", "merged"]),
         "add" | "new" => s(ADD),
         "list" | "ls" => f(LIST),
+        "status" | "summary" | "usage" => f(&["all", "repo"]),
+        "batch" => s(&["request-id", "anyway", "research", "chat", "after", "now"]),
         "report" => f(&["state", "kind", "msg", "title", "progress", "eta", "desc", "repo"]),
         "describe" | "rename" | "tell" | "stop" | "start" | "pick" | "review" | "retry" | "fix" | "finish" | "details" | "clear" => f(&[]),
         "pin" | "unpin" => f(&["on"]),

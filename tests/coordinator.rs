@@ -2,6 +2,7 @@
 //! your words going in exactly as typed (enter alone: it decides what to start), its reply in the chat's box in place of
 //! what you said, alt+c only shows or hides that message, and where each message was sent from said to it.
 use crate::common;
+use crate::common::prompt_text as text;
 use common::board::open;
 use common::*;
 use serde_json::json;

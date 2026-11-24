@@ -2,6 +2,8 @@
 //! the same program as the plugin's pane in herdr. The subcommands let any agent drive the board from its shell. The
 //! entries herdr and the agents' hooks run are here; the commands on tasks are cli/tasks.rs.
 pub mod flags;
+pub mod batch;
+pub mod economy;
 pub mod help;
 pub mod pins;
 pub mod tasks;
