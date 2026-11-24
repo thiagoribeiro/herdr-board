@@ -53,8 +53,10 @@ The severity says what the fault does:
   not valid) shows the reviewer's last screen in the failure: its last 8 lines, read before its tab closes. A dialog
   that stopped it (one herdr did not report as a dialog) is there to see, before you retry.
 
-Findings below the gate still show on the review page, in the task panel and in a comment on the pull request, marked
-as not required.
+Findings below the gate still show on the review page and in the task panel, marked as not required.
+
+The review stays in the board: nothing of it is written on GitHub. With `review.prComments true` (for a task, a repo, everything or in the repo's own file) each round is also a comment on the task's pull request (`Review N · Pass/Fail …`), with the same findings.
+The comments you write on the pull request are read either way: they are your feedback to the agent.
 
 ## Merging by itself
 
