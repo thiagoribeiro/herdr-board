@@ -21,7 +21,7 @@ fn every_setting_of_the_open_task_with_its_label_and_meaning_changed_and_put_bac
     // the terminal page's rows, in its order
     let want: Vec<String> = { let c = sw::webui::web::client("test"); let mut g = c.lock().unwrap(); let was = g.s.editing.replace(sw::board::state::Editing { id: t.clone(), ..Default::default() }); let r = sw::board::update::edit::rows(&g.s); g.s.editing = was; r.iter().map(|x| x.t("name")).collect() };
     assert_eq!(s.at("settings").arr("rows").iter().map(|x| x.t("name")).collect::<Vec<_>>(), want);
-    assert_eq!(row(&s, "research.only"), json!({ "name": "research.only", "label": "Research only", "means": "its agent changes nothing in the repo; the result is a report, and nothing is pushed, opened or merged", "own": false, "value": "off", "from": "",
+    assert_eq!(row(&s, "research.only"), json!({ "name": "research.only", "label": "Research only", "means": "its agent changes nothing in the repo; the result is its closing note, and nothing is pushed, opened or merged", "own": false, "value": "off", "from": "",
         "words": [{ "value": "true", "say": "on", "now": false }, { "value": "false", "say": "off", "now": true }], "hint": "" }));
     assert!(row(&s, "review.rounds").at("words").is_null()); assert!(row(&s, "review.rounds").s("hint").contains("a whole number, 0 or more"));
     // The two limits are there like every setting: the plain label, what the value may be, and what it means.

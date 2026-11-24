@@ -68,9 +68,7 @@ pub fn ended_pass(tasks: &[Task], socket: &str) {
         if words.is_empty() { continue; }
         let text = text_of(seen.s("id"), words);
         let _ = change(&co, |c| {
-            let mut q = c.arr("queue").to_vec();
-            q.push(json!({ "id": crate::util::uuid(), "text": text, "said": text, "board": true, "at": now() }));
-            c.put("queue", q);
+            super::state::enqueue(c, json!({ "id": crate::util::uuid(), "text": text, "said": text, "board": true, "at": now() }));
             true
         });
     }

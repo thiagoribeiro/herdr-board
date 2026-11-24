@@ -27,7 +27,7 @@ Every command accepts `--json`. Below, `herdr-board` stands for that path.
   (a title is a few words, {TITLE_RULE}: a longer one is cut short and its full text kept in the description;
   `--repo <name or path>` for another). Adding starts nothing. Add `--delegate` only if the human asked for an agent.
   Add `--research` when the human plainly asked for research, a review or a report with nothing changed: the task's agent
-  then changes nothing in the repo and its result is a report (later: `delegate <id> --research`). It is short for
+  then changes nothing in the repo and its result is its closing note (later: `delegate <id> --research`). It is short for
   the setting `research.only`: `--research.only true`, or `set research.only true --task <id>` (`--repo <name>`
   for every new task of a repo; `--no-research` on one task says otherwise).
   Add `--chat` when the human plainly asked for a conversation with nothing to build (a consulting session, a

@@ -97,3 +97,20 @@ fn a_long_note_says_where_it_was_cut_and_only_the_board_writes_its_messages() {
     let e = command("add", &parse(&["add", "Again", "--follow-up", &id, "--on", "vm-x"].iter().map(|s| s.to_string()).collect::<Vec<_>>())).unwrap_err().msg;
     assert!(e.contains("--follow-up names a task of this machine"), "{e}");
 }
+
+#[test]
+fn the_board_message_keeps_its_first_words_when_the_rules_changed() {
+    let w = super::coord_world();
+    let co = Co::top(&w.socket);
+    w.script(json!({ "coordinator": [{ "said": "Hello." }, { "said": "PRJ-1 is ready." }], "worker": [{ "files": { "f.txt": "v1\n" }, "commit": "v1", "note": "Did v1." }] }));
+    sw::coordinator::requests::send(&w.root, "hello", false, "", &co).unwrap(); super::drain();
+    // Its standing rules changed since its program started (this very update does that): the line saying so goes
+    // after the board's message, which still starts with its own words.
+    sw::coordinator::state::change(&co, |c| { c.put("rulesHash", "older"); true }).unwrap();
+    to_approval(&w, "Change the file");
+    housekeep(&w);
+    sw::coordinator::pump::tick(&co); super::drain();
+    let typed = common::pilot::prompts_of(&w, &co).pop().unwrap_or_default();
+    assert!(typed.starts_with("Board: PRJ-1 is ready to approve.") && typed.contains("\n\n[The board was updated: your standing rules"), "{typed}");
+    assert_eq!(sw::coordinator::ended::shown_as(&typed).map(|s| s.0), Some("Board"));
+}

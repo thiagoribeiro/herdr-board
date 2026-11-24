@@ -103,8 +103,8 @@ fn research_only_several_reports_the_reviewer_reads_them_and_the_chosen_report_i
     let a = obj(json!({ "letter": "A", "agent": "claude", "id": "proj/1a", "summary": "Report A written." }));
     let b = obj(json!({ "letter": "B", "agent": "codex", "id": "proj/1b" }));
     let said = sw::attempts::compare::compare_brief(&asked, &[a, b], true);
-    assert!(said.contains("This task is research only: each attempt's whole result is a report"), "{said}");
-    assert!(said.contains(&format!("its report: {}/", folder("proj/1a").display())), "{said}");
+    assert!(said.contains("This task is research only: each attempt's whole result is its closing note"), "{said}");
+    assert!(said.contains(&format!("its result, its closing note: {}", sw::store::files::dir_of("proj/1a").join("closing-note.md").display())), "{said}");
     assert!(regex::Regex::new(&format!(r"Then write one report from all of them.*Save it in {}/", regex::escape(&folder(&id).display().to_string()))).unwrap().is_match(&said), "{said}");
     assert!(said.contains("\"pick\": \"<the letter of the attempt to keep: A or B>\""), "{said}");
 }

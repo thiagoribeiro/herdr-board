@@ -14,6 +14,8 @@ pub fn dir_of(co: impl Into<Co>) -> PathBuf {
 }
 fn file_of(co: &Co) -> PathBuf { dir_of(co).join("state.json") }
 pub fn get(co: impl Into<Co>) -> Option<Obj> { read_obj(&file_of(&co.into())) }
+/// A message into its queue (`c`, its whole state), pushed in place: your words, a wake, a task that ended.
+pub fn enqueue(c: &mut Obj, m: Value) { match c.get_mut("queue").and_then(|q| q.as_array_mut()) { Some(q) => q.push(m), None => c.put("queue", vec![m]) } }
 /// A pump (the detached job that starts it and types into it) is at work for this coordinator.
 pub fn pumping(c: &Obj) -> bool { c.at("pump").is_object() && marker_alive(c.at("pump")) }
 /// The one way its state changes: under its lock. `f` returning false writes nothing.

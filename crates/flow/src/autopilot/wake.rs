@@ -41,9 +41,8 @@ pub fn merged(a: &[Value], b: &[Value]) -> Vec<Value> {
 /// start that failed before is tried again.
 pub fn queue(c: &mut Obj, ap: &mut Obj, text: &str, reasons: &[Value]) {
     let id = crate::util::uuid();
-    let mut q = c.arr("queue").to_vec();
-    q.push(json!({ "id": id, "text": text, "said": text, "autopilot": true, "at": now() }));
-    c.put("queue", q); c.put("error", ""); c.put("stopped", false);
+    crate::coordinator::state::enqueue(c, json!({ "id": id, "text": text, "said": text, "autopilot": true, "at": now() }));
+    c.put("error", ""); c.put("stopped", false);
     ap.put("wake", json!({ "id": id, "at": now(), "reasons": reasons, "text": text }));
 }
 /// The wake still waits in the queue, untyped.

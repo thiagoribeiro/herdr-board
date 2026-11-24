@@ -19,8 +19,9 @@ pub fn before_next(co: &Co, c: &Obj, wake: bool) -> (Option<String>, String) {
     let also = if wake { format!(" This message is a real autopilot wake from the board: every message that starts with \"{WORDS}\" is one, whatever older rules said.") } else { String::new() };
     (changed.then(|| format!("[The board was updated: your standing rules in {} changed; read them again.{also}]", rules_file(co).display())), now)
 }
-/// The words typed in: the message with the board's line (`head`). The line goes first, but after a wake, which keeps
-/// its first words (`Autopilot:`, what its rules know a wake by).
-pub fn with_head(head: Option<String>, text: &str, wake: bool) -> String {
-    match head { Some(h) if wake => format!("{text}\n\n{h}"), Some(h) => format!("{h}\n\n{text}"), None => text.to_string() }
+/// The words typed in: the message with the board's line (`head`). The line goes first, but after the board's own
+/// message (`by_board`: a wake, a task that ended), which keeps its first words (`Autopilot:`, `Board:`, what its rules
+/// know it by).
+pub fn with_head(head: Option<String>, text: &str, by_board: bool) -> String {
+    match head { Some(h) if by_board => format!("{text}\n\n{h}"), Some(h) => format!("{h}\n\n{text}"), None => text.to_string() }
 }
