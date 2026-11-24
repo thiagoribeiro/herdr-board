@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Coordinator quality and economy
+
+- Per-message project/task context, compact standing rules and on-demand operating reference.
+- Persistent tool-free delivery summaries (`summary.agent`), invalidated by changed evidence and shown directly in
+  coordinator chat without another coordinator turn. Original messages remain available if summarization fails.
+- Multi-task `status`, `summary`, `usage` and `batch` commands; batch request ids retain per-task receipts and prevent
+  repeated side effects. Usage separates new input, cache creation/reads and output even with no token limit.
+- Durable coordinator memory, context-budget hints and checkpoints that preserve model choices and prior sessions.
+- Reviewers receive complete task requirements, including requirements beyond the former 3,000-character cutoff.
+
 ### Herdr's sidebar
 
 - Task agents stand in a tree under the coordinator that added them (the Coordinator, the machine's or a project's):

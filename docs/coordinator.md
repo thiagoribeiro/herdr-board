@@ -50,9 +50,10 @@ row is that machine's, and this one is not on the board.
 
 ## Your message, and where you were
 
-Your words reach it exactly as typed. Which repo you were in and which task you had open are kept beside each message,
-and the Coordinator looks them up itself (`herdr-board coordinator where` lists the last few messages, each with its
-own).
+Your words reach it as typed, with a hidden context block carrying that message's original repo, selected task,
+delegation intent and relevant cached results. It uses that context directly; `herdr-board coordinator where`
+remains a fallback for older messages. Task deliveries appear in its chat without starting a model turn.
+See [coordinator quality and economy](coordinator-economy.md) for summaries, batch receipts, memory and usage.
 
 A board opened from the Coordinator's own pane stays in the repo it was last in: that pane's folder is nobody's repo.
 

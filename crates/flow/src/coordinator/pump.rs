@@ -199,10 +199,11 @@ fn run_pump(co: &Co, taken: &mut HashSet<String>) -> Res<()> {
             if let Some(n) = &note { change(co, |c| { let mut l: Vec<Value> = c.arr("where").iter().filter(|x| x.s("id") != id).cloned().collect(); l.push(Value::Object(n.clone())); c.put("where", l); true })?; }
             // What it had last said when these words went in: the board shows them in its place until it says something new.
             let now_look = look_now(co);
+            let usage_base = super::usage::count(co);
             let (over, over_id) = (now_look.said.clone(), now_look.turn.as_ref().filter(|t| t.finished).map(|t| t.id.clone()).unwrap_or_default());
             let intro = get(co).map(|c| c.b("intro")).unwrap_or(false);
             let (news, rules_hash) = super::rules_news::before_next(co, &get(co).unwrap_or_default(), m.b("autopilot"));
-            let words_in = super::rules_news::with_head(if intro { Some(intro_line_of(co)) } else { news }, m.s("text"), m.b("autopilot"));
+            let words_in = super::context::wrap(co, &m, &super::rules_news::with_head(if intro { Some(intro_line_of(co)) } else { news }, m.s("text"), m.b("autopilot")));
             let typed = match hand(&api, c.s("pane"), &words_in) {
                 Ok(t) => t,
                 Err(e) if e.code == "agent_blocked" || e.code == "agent_not_ready" => { unsay(); stuck = true; break; }
@@ -217,13 +218,13 @@ fn run_pump(co: &Co, taken: &mut HashSet<String>) -> Res<()> {
                 c.put("intro", false); c.put("rulesHash", rules_hash.clone()); c.put("sentAt", now());
                 if !m.b("autopilot") { c.put("last", m.at("said").clone()); c.put("over", over.clone()); c.put("overId", over_id.clone()); } // a wake is no words of yours
                 // Who its turn is on: a task's agent that sent it (coordinator tell), and an autopilot wake (autopilot/).
-                c.put("typedFrom", m.at("sender").clone()); c.put("typedId", id.clone());
+                c.put("typedFrom", m.at("sender").clone()); c.put("typedId", id.clone()); c.put("usageBase", usage_base.clone());
                 if m.b("autopilot") { crate::autopilot::wake::typed(c, &m, started); }
                 true
             })?;
             // Typed is not sent: if it still sits at its prompt, enter is pressed again (never the words).
             let busy = typed.as_ref().map(|t| t.b("busy")).unwrap_or(false);
-            let words = if busy { [get(co).map(|c| c.at("typed").t("text")).unwrap_or_default(), m.t("text")].into_iter().filter(|s| !s.is_empty()).collect::<Vec<_>>().join("\n\n") } else { m.t("text") };
+            let words = if busy { [get(co).map(|c| c.at("typed").t("text")).unwrap_or_default(), words_in.clone()].into_iter().filter(|s| !s.is_empty()).collect::<Vec<_>>().join("\n\n") } else { words_in.clone() };
             change(co, |c| { c.put("typed", if busy { let mut t = typed.as_ref().and_then(|t| t.as_object().cloned()).unwrap_or_default(); t.put("text", words.clone()); Value::Object(t) } else { Value::Null }); true })?;
             let mark = typed.clone().unwrap_or(Value::Null);
             if !confirm(&api, c.s("pane"), typed, Some(&|| said_in(co, &mark, &words))) { crate::fail!("{UNSENT}"); }

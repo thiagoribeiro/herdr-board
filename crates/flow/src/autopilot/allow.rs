@@ -13,20 +13,22 @@ use crate::json::*;
 use crate::store::tasks::find;
 
 /// Commands that only read.
-const READS: [&str; 5] = ["list", "ls", "show", "details", "models"];
+const READS: [&str; 8] = ["list", "ls", "show", "details", "models", "status", "summary", "usage"];
 fn sub(pos: &[String]) -> &str { pos.get(1).map(|s| s.as_str()).unwrap_or("") }
 fn reads(cmd: &str, pos: &[String]) -> bool {
-    READS.contains(&cmd) || (cmd == "autopilot" && !["on", "off"].contains(&sub(pos))) || (cmd == "coordinator" && ["where", "status", ""].contains(&sub(pos)))
+    READS.contains(&cmd) || (cmd == "autopilot" && !["on", "off"].contains(&sub(pos))) || (cmd == "coordinator" && ["where", "status", "context", "usage", "history", "help", ""].contains(&sub(pos)))
 }
 /// Does this command switch autopilot, or write a coordinator's setting?
 fn switches(cmd: &str, pos: &[String]) -> bool {
-    (cmd == "autopilot" && ["on", "off"].contains(&sub(pos))) || (["set", "unset"].contains(&cmd) && pos.get(1).map(|n| n.starts_with("coordinator.") || n.starts_with("autopilot.")).unwrap_or(false))
+    (cmd == "coordinator" && ["memory", "checkpoint"].contains(&sub(pos))) || (cmd == "autopilot" && ["on", "off"].contains(&sub(pos))) || (["set", "unset"].contains(&cmd) && pos.get(1).map(|n| n.starts_with("coordinator.") || n.starts_with("autopilot.")).unwrap_or(false))
 }
 fn no(msg: String) -> Res<Option<Co>> { Err(crate::err::Error::refused(msg)) }
 fn refused(what: &str, rule: &str) -> Res<Option<Co>> { no(format!("Refused in an autopilot wake: {what}. {rule}")) }
 /// The guard, before a command runs. `agent`: the task whose agent or reviewer runs it (cli/mod.rs: caller). Some:
 /// the command runs in this coordinator's autopilot turn, and `add` keeps to its limits.
 pub fn guard(cmd: &str, pos: &[String], flags: &Obj, agent: Option<(&Obj, &str)>) -> Res<Option<Co>> {
+    // Batch dispatches the ordinary command for every item, each through this guard in the original caller's turn.
+    if cmd == "batch" { return Ok(None); }
     if let Some((t, role)) = agent {
         if switches(cmd, pos) { return no(format!("You are taken as {}'s {role}. A task's {role} can never switch autopilot or change a coordinator's settings: only the human does, by a key, a command of theirs, or by telling a coordinator.", t.s("id"))); }
         // A report with no id is its own task's only for its agent: for anyone else it adds a task (cli/tasks.rs).

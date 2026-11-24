@@ -2,6 +2,7 @@
 //! happens, a long launch line never reaches the shell), stop leaves it stopped with words still waiting, and a stop asked
 //! for while a message goes in holds back the ones still waiting.
 use crate::common;
+use crate::common::prompt_text as text;
 use common::board::open;
 use common::*;
 use serde_json::{json, Value};

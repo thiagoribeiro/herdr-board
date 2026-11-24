@@ -70,7 +70,7 @@ fn agents_reviewers_and_the_coordinator_are_told_the_same_plain_thing_work_found
     assert!(brief.contains("such a finding is a note for the human, it never sends the work back and nothing else is done with it"), "{brief}");
     assert!(brief.contains("one that was there before this change is marked `preexisting`: it is a note for the human in your review"), "{brief}");
     assert!(!has(&brief, "suggest|becomes a task"));
-    let coordinator = sw::coordinator::rules::rules("board");
+    let coordinator = sw::coordinator::rules::reference_of(&sw::coordinator::co::Co::top(""), "board");
     assert!(coordinator.contains("they mention it in a short \"Also noticed\" list in their closing note or report (a reviewer: as a note in the review)"), "{coordinator}");
     let skill = sw::extras::skill_text::skill_text("herdr-board");
     assert!(skill.contains("mention it in a short \"Also noticed\" list"), "{skill}");

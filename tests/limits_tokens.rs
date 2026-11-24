@@ -106,12 +106,12 @@ fn a_reviews_tokens_owed_before_a_limit_count_once_one_is_set_and_a_cut_off_turn
     let id = at_work(&w, json!({}));
     sw::store::tasks::patch(&id, |t| { t.put("reviewSession", "rev-1"); t.obj_mut("link").put("reviewer", json!({ "kind": "claude" })); }).unwrap();
     reply(&dir.join("rev-1.jsonl"), sw::clock::now(), 300000, "Done.");
-    let cwd = sw::store::repos::cwd_of(&task(&id)).display().to_string();
-    assert_eq!(sw::limits::spent::count(&id, "reviewer", 2000).unwrap().at("spent"), &json!({ "owed": [{ "kind": "claude", "session": "rev-1", "file": "", "cwd": cwd }] }));
+    let counted = sw::limits::spent::count(&id, "reviewer", 2000).unwrap();
+    assert_eq!(counted.at("spent").i("total"), 300000, "reviews are measured even before a token limit is set");
     sw::store::tasks::patch(&id, |t| { t.put("reviewSession", Value::Null); t.obj_mut("link").put("reviewer", Value::Null); }).unwrap();
     set_value("limit.tokens", &json!("200k"), &Scope::task(&task(&id))).unwrap();
     assert_eq!(tokens_over(&id, "agent"), Some(("200k".to_string(), 300000.0)));
-    assert!(!task(&id).at("spent").has("owed"));
+    assert!(task(&id).at("spent").arr("owed").iter().all(|e| e.s("session") != "rev-1"), "the measured review is not counted twice");
     // A turn the provider cut off, on a task at its limit: it is not tried again by itself. It stops.
     let cut = w.base.join("cut.jsonl");
     let at = sw::clock::now();

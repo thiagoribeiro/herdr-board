@@ -75,7 +75,8 @@ pub fn send_as(cwd: &Path, text: &str, delegate: bool, about: &str, co: impl Int
     let text = &crate::autopilot::wake::escape(text);
     let c = change(&co, |c| {
         let mut q = c.arr("queue").to_vec();
-        q.push(json!({ "id": crate::util::uuid(), "text": if delegate { format!("{text}\n\n{}", tab_note()) } else { text.to_string() }, "said": text, "where": ctx, "at": now(), "sender": sender }));
+        q.push(json!({ "id": crate::util::uuid(), "text": if delegate { format!("{text}\n\n{}", tab_note()) } else { text.to_string() }, "said": text, "where": ctx, "at": now(), "sender": sender,
+            "context": super::context::capture(&ctx, text, &sender) }));
         c.put("queue", q); c.put("error", ""); c.put("stopped", false);
         crate::autopilot::wake::yield_to_you(c);
         true

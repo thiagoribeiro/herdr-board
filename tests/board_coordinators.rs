@@ -2,6 +2,7 @@
 //! coordinator, as space on a task talks to its agent: the chat names it, what you type goes to it, and space again goes
 //! back to the Coordinator. Another machine's are reached there, from what it sends with its tasks.
 use crate::common;
+use crate::common::prompt_text as text;
 use common::board::open;
 use common::*;
 use serde_json::{json, Value};

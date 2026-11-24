@@ -2,6 +2,7 @@
 //! about to the Coordinator, enter goes into a task's agent, the chat's head line at every width, a narrow or short
 //! window; and a message sent with tab, whose tasks the board itself delegates when they come from that turn.
 use crate::common;
+use crate::common::prompt_text as text;
 use common::board::open;
 use common::*;
 use serde_json::json;
@@ -79,7 +80,7 @@ fn sent_with_tab_every_task_the_coordinator_adds_from_that_message_gets_an_agent
     w.script(json!({ "coordinator": [{ "status": "working" }] }));
     send(&w.root, "a login page, and dark mode", true, "", &w.socket).unwrap(); drain();
     assert_eq!(prompts_of(&w)[0], format!("a login page, and dark mode\n\n{}", tab_note()));
-    assert!(has(&rules("board"), r"A message sent with ctrl\+s ends with a line in square brackets saying so\.[^\n]*every task you add from that message gets an agent at once, with no question back"));
+    assert!(rules("board").contains("Add --delegate only if requested or this message's delegate flag is true"));
     let pane = get(&w).t("pane");
     // A task added from anywhere else is only added: the human's shell, a working agent's pane.
     assert_eq!(board(&["add", "Mine"]), "proj/1: added");

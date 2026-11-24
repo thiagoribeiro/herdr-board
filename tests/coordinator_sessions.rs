@@ -2,6 +2,7 @@
 //! new-chat command (Claude Code's /clear, pi's /new) is followed, and a helper's side conversation, a headless run or
 //! another folder's chat is never taken for its.
 use crate::common;
+use crate::common::prompt_text as text;
 use common::*;
 use serde_json::{json, Value};
 use std::path::{Path, PathBuf};

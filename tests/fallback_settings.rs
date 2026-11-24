@@ -93,7 +93,7 @@ fn the_settings_page_and_the_coordinators_rules_say_it_and_the_words_for_why_an_
     b.press(&["enter"]); b.typed("codex, nobody"); b.press(&["enter"]);
     assert!(b.screen(140).join("\n").contains("no agent program \"nobody\""), "{}", b.screen(140).join("\n"));
     assert_eq!(task(&id).at("settings").at("worker.fallback"), &json!(["codex", "pi"]));
-    let told = sw::coordinator::rules::rules("board");
+    let told = sw::coordinator::rules::reference_of(&sw::coordinator::co::Co::top(""), "board");
     assert!(told.contains("worker.fallback and reviewer.fallback: a list of agents tried in order"));
     assert!(told.contains("\"if Claude runs out, let Codex finish it\": board set worker.fallback codex"));
     drop(b); drop(w);

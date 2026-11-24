@@ -35,7 +35,7 @@ fn every_agent_is_told_a_report_never_goes_into_the_repo_a_research_agent_that_i
     assert!(r.contains("the work that should follow from it is a short list in that report (\"Also noticed\"): nothing else is done with it, and you add no task for it"), "{r}");
     assert!(r.contains("Commit nothing on this branch") && r.contains(&format!("{}/", reports.join("2").display())), "{r}");
     assert!(!r.contains("Commit your work on this branch") && !r.contains("only counts as done when this passes"), "{r}");
-    let coordinator = sw::coordinator::rules::rules("board");
+    let coordinator = sw::coordinator::rules::reference_of(&sw::coordinator::co::Co::top(""), "board");
     assert!(coordinator.contains("add the task with --research") && coordinator.contains("board delegate <id> --research (--no-research turns it off again)"), "{coordinator}");
     // The reviewer of one reviews the report, and a change to the repo is a finding.
     let b = brief(&task(&research));

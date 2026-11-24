@@ -94,7 +94,7 @@ fn delegate_an_automation_the_coordinator_and_the_settings_page() {
     let made = sw::automations::fire::fire(auto.s("id"), sw::automations::told::Cause::Run, sw::clock::now()).unwrap();
     assert_eq!(task(made.s("task")).at("settings").s("attempts.by"), "claude, codex", "{made}");
     // the Coordinator's standing rules say it in plain words
-    let r = sw::coordinator::rules::rules("board");
+    let r = sw::coordinator::rules::reference_of(&sw::coordinator::co::Co::top(""), "board");
     for want in ["\"do this one three times and let me choose\"", "board delegate <id> --attempts.by 3", "board pick <id> <letter>"] { assert!(r.contains(want), "{want}"); }
     // the settings page
     let id = w.add("T");

@@ -37,7 +37,7 @@ static TURNS: LazyLock<Mutex<HashMap<String, (PathBuf, (std::time::SystemTime, u
 static SCREENS: LazyLock<Mutex<HashMap<String, (String, i64, String)>>> = LazyLock::new(Default::default);
 /// What you said, without what the board put around it on its way in.
 fn bare(text: &str, co: &Co) -> String {
-    let mut s = text.to_string();
+    let mut s = super::context::bare(text);
     let intro = intro_line_of(co);
     if let Some(r) = s.strip_prefix(&intro) { s = r.trim().to_string(); }
     let note = tab_note();
@@ -46,11 +46,13 @@ fn bare(text: &str, co: &Co) -> String {
 }
 pub fn look(co: impl Into<Co>) -> Look {
     let co = co.into();
+    if due(&co.mark("coordinator-usage"), 15000) { super::usage::count(&co); }
     let socket = co.socket.as_str();
     let c = get(&co);
     let def = choice_of(&co);
     let Some(c) = c.filter(|c| c.b("run") || c.b("pane") || !c.arr("queue").is_empty() || c.b("want") || c.b("error")) else {
-        return Look { state: "none".into(), run: def.clone(), def, ..Default::default() };
+        let talk = crate::digest::messages(&co);
+        return Look { state: "none".into(), readable: !talk.is_empty(), talk, run: def.clone(), def, ..Default::default() };
     };
     let agent = if c.b("pane") && (crate::herdr::cli::fake().is_some() || socket_exists(socket)) { Herdr::new(Some(socket.into())).agent_get(c.s("pane")).ok().flatten() } else { None };
     let status = agent.as_ref().map(|a| a.t("agent_status"));
@@ -74,6 +76,10 @@ pub fn look(co: impl Into<Co>) -> Look {
             talk = talk_of(&k, Some(f), "", &h, 12).unwrap_or_default().into_iter().map(|m| if m.you { Said { text: bare(&m.text, &co), ..m } } else { m }).filter(|m| !m.text.is_empty()).collect();
         }
     }
+    let mut results = crate::digest::messages(&co);
+    talk.append(&mut results);
+    talk.sort_by_key(|m| m.at);
+    talk.drain(..talk.len().saturating_sub(24));
     let queue = c.arr("queue").len();
     let state = if c.b("starting") && pumping(&c) { "starting" } else { match status.as_deref() { Some("working") => "working", Some("blocked") => "blocked", Some(_) => "idle", None => if c.b("stopped") && !c.b("want") { "exited" } else if busy || queue > 0 { "starting" } else if c.b("run") { "exited" } else { "none" } } };
     let readable = run.as_ref().map(|r| kind(r.s("kind")).map(|k| k.reads_turn).unwrap_or(false)).unwrap_or(false);

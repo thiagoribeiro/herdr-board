@@ -239,7 +239,7 @@ fn ask_first_access_refuses_it_stop_says_it_is_still_on_and_a_new_chat_keeps_it(
 fn every_coordinators_rules_say_what_a_wake_is_and_hold_every_exception_for_one() {
     let w = pilot_world();
     for co in [Co::top(&w.socket), Co::machine(&w.socket), proj(&w)] {
-        let rules = sw::coordinator::rules::rules_of(&co, "board");
+        let rules = sw::coordinator::rules::reference_of(&co, "board");
         assert_eq!(rules.matches(sw::coordinator::rules_autopilot::EXCEPT).count(), 3, "{rules}");
         assert!(rules.contains("An autopilot wake is a message that starts with the exact words \"Autopilot:\""));
         assert!(rules.contains("first read your autopilot as it stands now: board autopilot show") && rules.contains("never from memory"), "{rules}");

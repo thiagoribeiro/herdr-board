@@ -4,6 +4,7 @@
 //! program exited or herdr restarted. Its state is one file beside the tasks. Nothing here blocks the board: `send`,
 //! `restart`, `fresh`, `stop` and `open` only write the request down and start the detached job (`pump`). One area per file.
 pub mod co;
+pub mod context;
 pub mod far;
 pub mod look;
 pub mod look_live;
@@ -17,4 +18,5 @@ pub mod rules_notes;
 pub mod rules_place;
 pub mod sidebar;
 pub mod state;
+pub mod usage;
 pub mod who;
