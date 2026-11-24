@@ -3,11 +3,13 @@ pub const HELP: &str = r#"herdr-board: a work board for herdr
 
   herdr-board                     open the board here (in herdr: bind a key to the plugin action "open")
   herdr-board add <title> [--desc TEXT] [--repo NAME|PATH] [--delegate] [--after ID[,ID…]] [--<setting> VALUE ...] [--research|--no-research] [--chat|--no-chat] [--on MACHINE]
+                         [--route ENTRY --route.reason TEXT]
                                       (--research: research only, short for --research.only true. Its agent changes
                                        nothing in the repo; the result is a report. --no-research: not research only,
                                        where a default says it is. --chat: chat only, short for --chat.only true: a
                                        conversation that changes nothing and ends only when you say: finish <id>.
-                                       --on: add it on another machine the board knows, as that machine adds its own)
+                                       --on: add it on another machine the board knows, as that machine adds its own.
+                                       --route: the catalog's entry it works on (models catalog), with why in a line)
   herdr-board list [--archived] [--all] [--pinned] [--query TEXT] [--json]
   herdr-board status [--all] [--json]       one line per active task: where it stands and for how long, whose turn it
                                                 is (you, agent, board, github), the next step, and why it stalled
@@ -17,7 +19,7 @@ pub const HELP: &str = r#"herdr-board: a work board for herdr
   (a title is at most 60 characters: a longer one is shortened at a word, its full text kept in the description)
   (an <id> is repo/134; every repo has a short key, made from its name, and HSW-134 names the same task, in any
    letter case. Another key: herdr-board set repo.key HSW --repo NAME; the old one still names its tasks)
-  herdr-board delegate <id> [--after ID[,ID…]|--now] [--<setting> VALUE ...] [--research|--no-research] [--chat|--no-chat]
+  herdr-board delegate <id> [--after ID[,ID…]|--now] [--<setting> VALUE ...] [--research|--no-research] [--chat|--no-chat] [--route ENTRY --route.reason TEXT]
                                       any work setting, for this task only: --reviewer.agent claude --merge.by itself
                                       (a refused option changes nothing on the task)
                                       --after: start only once those tasks (of any repo here, or of another machine:
@@ -60,6 +62,9 @@ pub const HELP: &str = r#"herdr-board: a work board for herdr
                                        refused with the reason)
   herdr-board models [PROGRAM]              the model names each program takes, written as a setting writes them
                                       (codex/<model>); a name it does not take is refused when it is set
+  herdr-board models catalog [--init]       the catalog of models a task is routed to (~/.herdr-board/models.toml), each
+                                      entry with its cost, what it is good for and how it fared; --init writes the example
+  herdr-board models stats [--since 30d]    routed tasks by entry: tokens, cost, reviews failed, escalations
   herdr-board automations [add|show|change|on|off|run|firings|remove] …
                                       tasks made on a schedule or when something happens on the board; each firing adds
                                       a task and puts an agent on it. `herdr-board automations help` says how

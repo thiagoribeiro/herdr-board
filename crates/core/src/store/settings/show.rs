@@ -25,6 +25,9 @@ fn note(s: &Entry, r: &Found, task: Option<&Task>, scope: &Scope, no_repo: bool,
         let repo = if scope.repo.is_empty() { task.map(|t| t.s("id").split('/').next().unwrap_or("").to_string()).unwrap_or_default() } else { scope.repo.clone() };
         match repo_keys().get(&repo) { Some(k) if *k == text(&r.value) => {}, Some(k) => return format!("not used: another repo has or had the same key; its tasks go by {k}"), None => return "not used: another repo has or had the same key".into() }
     }
+    // A program your catalog does not allow (allow.agents): a built-in default can name one.
+    if s.ty == Ty::Agent { let k = agent_of(&text(&r.value)).kind; if !k.is_empty() { let n = crate::agents::models::allow::note(&k); if !n.is_empty() { return n; } } }
+    if s.name == "route.default" && text(&r.value) != "none" && crate::agents::models::catalog::load().get(&text(&r.value)).is_none() { return "not used: no such entry in the catalog of models (herdr-board models catalog)".into(); }
     if s.name == "attempts.by" && task.map(|t| t.b("startedOnce")).unwrap_or(false) { return "its work has begun: counts when it is started afresh".into(); }
     if s.name.ends_with(".fast") && r.value == json!(true) {
         let k = agent_of(&get(&format!("{}.agent", s.name.split('.').next().unwrap_or("")))).kind;

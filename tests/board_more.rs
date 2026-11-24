@@ -42,7 +42,10 @@ fn a_long_message_wraps_inside_the_box_and_takes_the_rows_it_needs_never_the_tex
         // With its box it takes two thirds of the 30 rows: 14 lines of it (the box's empty rows take two), under the
         // box's edge, which names who it is. It starts at its beginning, under no label: the edge says whose it is.
         assert_eq!(body.len(), 14, "fourteen lines of it at {width} columns: {body:?}");
-        assert!(c.lines.iter().any(|l| l.starts_with("╭─") && l.contains(&format!(" {me} "))), "{:?}", c.lines);
+        // Where the name is too long for the edge (a long host name: the machine coordinator's), the edge is bare.
+        // It fits as chat_title.rs lays it: ` name ` and ` · Machine coordinator`, within the edge less its corners and `─ `.
+        let fits = me.chars().count() + 2 + " · Machine coordinator".chars().count() <= width - 6;
+        assert!(c.lines.iter().any(|l| l.starts_with("╭─") && if fits { l.contains(&format!(" {me} ")) } else { l.trim_start_matches('╭').trim_end_matches('╮').chars().all(|c| c == '─') }), "{me} at {width}: {:?}", c.lines);
         assert!(body[0].starts_with("Line 1 of what it said"), "{body:?}");
         assert!(!body.join("\n").contains("**"));
         let rows = c.lines.iter().filter(|l| has(l, r"Task number \d+")).count();

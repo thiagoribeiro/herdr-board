@@ -257,6 +257,7 @@ pub fn details(id: &str) -> Res<Value> {
         "review": current_review(&t).cloned(),
         "reviews": review_history(&t),
         "agent": if t.b("on") { t.at("on").clone() } else if t.b("agent") { t.at("agent").clone() } else { Value::Null },
+        "route": if t.at("route").is_object() { let mut r = t.o("route").cloned().unwrap_or_default(); r.put("words", crate::store::route::from_words(t.at("route"))); Value::Object(r) } else { Value::Null },
         "handovers": handovers(&t).iter().map(|h| { let mut x = h.as_object().cloned().unwrap_or_default(); x.put("words", handover_line(h)); Value::Object(x) }).collect::<Vec<_>>(),
         "research": is_research(&t),
         "chat": crate::chat_only::is_chat(&t),

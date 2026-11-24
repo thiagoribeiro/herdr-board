@@ -113,6 +113,8 @@ pub fn delegate_with(id: &str, asked: Vec<(String, Value)>, w: Wait) -> Res<Task
         let why = turn_refusal(t, setting(RESEARCH, Some(t)) == json!(true));
         if !why.is_empty() { crate::fail!("{why} To start it as it was: herdr-board set {RESEARCH} false --task {id}"); }
         t.put("researchOpen", true);
+        // Its route: its first entry again, or `route.default` for one with none (store/route.rs).
+        crate::store::route::at_delegate(t);
         let agent = agent_of(&setting_text("worker.agent", Some(t))).kind;
         t.put("agent", agent.clone()); t.put("app", agent);
         t.put("stage", "queued"); t.put("queuedAt", now()); t.put("msg", ""); t.del("kind"); t.put("since", now()); t.put("watch", Value::Null);
