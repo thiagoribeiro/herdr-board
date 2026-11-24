@@ -32,8 +32,9 @@ pub fn review_tally(t: &Obj) -> String {
     if gate::is_tagged(rv) { return gate::tally(rv); }
     if gate::is_int(rv.at("score")) { format!("{}/5{}", rv.t("score"), if rv.at("recommend") == &json!(false) { ", reviewer says no" } else { "" }) } else { String::new() }
 }
-/// Who is on a task, as herdr's sidebar names them before where it stands.
-pub mod who { pub const AGENT: &str = "agent"; pub const REVIEWER: &str = "reviewer"; pub const BOARD: &str = "board"; pub const YOU: &str = "you"; }
+/// Who is on a task, as herdr's sidebar names them before where it stands; GitHub, whose turn a merge that waits for
+/// its checks is (`herdr-board status`).
+pub mod who { pub const AGENT: &str = "agent"; pub const REVIEWER: &str = "reviewer"; pub const BOARD: &str = "board"; pub const YOU: &str = "you"; pub const GITHUB: &str = "github"; }
 /// The board's own steps, each in a word, said after `board`.
 pub fn step(stage: &str) -> &'static str { match stage { "starting" => "starting", "setup" => "setting up", "checking" => "checking", "pushing" => "pushing", "merging" => "merging", _ => "" } }
 pub const QUEUED: &str = "queued";

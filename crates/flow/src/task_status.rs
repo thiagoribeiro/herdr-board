@@ -15,29 +15,18 @@ pub fn snapshot(t: &Obj) -> Value {
         v["review"] = json!({ "head": r.at("head"), "meets": r.at("meets"), "text": crate::store::tasks::one_line(r.s("text"), 400),
             "findings": r.arr("findings").iter().map(|f| json!({ "id": f.at("id"), "severity": f.at("severity"), "subject": crate::store::tasks::one_line(f.s("subject"), 400) })).collect::<Vec<_>>() });
     }
+    let status = crate::shown::turn::status_of(t, crate::clock::now());
+    for k in ["state", "whose", "next", "since", "for", "stall"] { v[k] = status.at(k).clone(); }
     v.as_object_mut().unwrap().retain(|_, x| !x.is_null());
     v
 }
 pub fn next_step(t: &Obj) -> (&'static str, String) {
-    if t.s("stage") == "working" && (t.at("live").b("down") || t.at("live").b("gone")) { return ("board", "Agent unavailable; inspect its last saved state".into()); }
-    if t.s("stage") == "working" && t.at("live").s("status") == "blocked" { return ("human", "Answer the agent's dialog".into()); }
-    if t.at("waiting").b("until") { return ("provider", format!("Retry after {}: {}", t.at("waiting").i("until"), t.at("waiting").s("reason"))); }
-    if t.b("syncBlocked") { return ("board", format!("Synchronize with base: {}", text(t.at("syncBlocked")))); }
-    let (owner, fallback) = match t.s("stage") {
-        "todo" | "progress" => ("human", "Start or delegate the task"),
-        "queued" => ("board", "Wait for a free agent slot"),
-        "after" => (if t.b("afterBlocked") { "human" } else { "board" }, "Wait for dependencies"),
-        "asks" | "reviewneeds" => ("human", "Answer the agent's question"),
-        "plan" => ("human", "Read and approve the plan"),
-        "pick" => ("human", "Choose an attempt"),
-        "approval" => (if t.b("checksWait") { "github" } else { "human" }, if t.b("checksWait") { "Wait for pull request checks" } else { "Review and approve the work" }),
-        "reviewing" => ("reviewer", "Review the change and evidence"),
-        "working" => ("agent", "Continue the task"),
-        "starting" | "finishing" | "checking" | "merging" | "syncing" => ("board", "Continue the task pipeline"),
-        "done" => ("none", "Finished"),
-        "failed" | "nosummary" | "stopped" => ("human", "Inspect the failure or stopped work"),
-        _ => ("board", "Inspect task details"),
+    let r = if t.b("state") { t.clone() } else { crate::flow::live::saved(t) };
+    let status = crate::shown::turn::status_of(&r, crate::clock::now());
+    let owner = if t.s("stage") == "done" { "none" } else if status.s("whose") == "agent" && t.s("stage") == "reviewing" { "reviewer" } else {
+        match status.s("whose") { "you" => "human", "agent" => "agent", "github" => "github", _ => "board" }
     };
-    (owner, if t.b("msg") && t.s("stage") != "done" { t.t("msg") } else { fallback.into() })
+    (owner, status.t("next"))
 }
+
 pub fn line(v: &Value) -> String { format!("{}  {}  {}  {}: {}", v.s("id"), v.s("title"), v.s("stage"), v.s("owner"), v.s("next")) }

@@ -6,6 +6,7 @@ pub mod batch;
 pub mod economy;
 pub mod help;
 pub mod pins;
+pub mod status;
 pub mod tasks;
 
 use crate::err::Res;

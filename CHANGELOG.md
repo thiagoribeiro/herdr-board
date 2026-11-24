@@ -11,6 +11,33 @@
   repeated side effects. Usage separates new input, cache creation/reads and output even with no token limit.
 - Durable coordinator memory, context-budget hints and checkpoints that preserve model choices and prior sessions.
 - Reviewers receive complete task requirements, including requirements beyond the former 3,000-character cutoff.
+### Status and stalls
+
+- `herdr-board status`: one line per active task, with where it stands, for how long, whose turn it is (you, the
+  agent, the board or GitHub) and the next step; `--json` for scripts, `--all` with done tasks too ([status](docs/status.md)).
+- A task that stopped moving is found by fixed rules, with no model: too long working or merging (`stall.after`, 45m),
+  a pull request GitHub finds in conflict with main, main that cannot be fetched (with the time of the last try). Its
+  row, Herdr's sidebar and `status` say why, and `board.notify` hears `stalled` and `conflict`
+  ([troubleshooting](docs/troubleshooting.md#a-task-is-stalled)).
+- A conflict with main, found by the board's own merge or reported by GitHub on the pull request (which now starts that
+  merge at once), goes back to its agent by itself, as before; `merge.fixConflicts` (on by default) turned off, it waits
+  for you instead.
+- Fixed: a pull request merged on GitHub while its task still said "working" was never seen; the task now goes to done,
+  and `board.notify` hears `merged outside`.
+- Fixed: an agent whose program exited in the middle of its turn (after "API Error: Connection lost mid-response") stayed
+  "working" with nothing for `retry` to send. It is now a real failure, retried by itself when its last words are a
+  passing provider error.
+### The Coordinator
+
+- A request that continues a task is a follow-up of it: `add … --follow-up <id>` keeps the link (`details` shows it)
+  and hands the new task's agent that task's change, pull request or branch, closing note and review, to keep to that
+  scope. The Coordinator asks you first when it is not sure which task, or how far
+  ([continuing earlier work](docs/coordinator.md#continuing-earlier-work)).
+
+### Research
+
+- A research result, and any report, is the agent's closing note, brought to the Coordinator's chat. A file in the
+  task's reports folder, with its private link, only when you ask for one ([reports and research](docs/research.md)).
 
 ### Herdr's sidebar
 

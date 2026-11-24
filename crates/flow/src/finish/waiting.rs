@@ -27,7 +27,7 @@ pub fn waits(t: &Task, turn: Option<&Turn>) -> bool {
     (t.b("selfBlocked") && t.s("stage") == "asks") || (turn.is_none() && t.at("blocked").b("at") && t.s("stage") == "asks") || same_turn(t, turn)
 }
 /// The turn is handled and the task waits, with the kind and the words its agent gave. A report that is there already
-/// gets its link: an interim report can be read while the task waits.
+/// gets its link: a report file the human asked for can be read while the task waits.
 pub fn stay(id: &str, t: &Task, turn: Option<&Turn>, seen: Obj, session: &str) {
     let report = keep_report(t, || crate::review_page::artifact_base(t.s("id")));
     let _ = update_wait(id, 10000, |t| {

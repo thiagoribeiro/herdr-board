@@ -40,11 +40,12 @@ from the task's own agent's pane, or its reviewer's, is refused, nothing changes
 finishes when the agent ends its turn, and the board then checks, reviews and merges it. Marking a task done with
 nothing merged stays yours (and the Coordinator's, on your word), as does `finish <id>`.
 
-## A report saved early
+## A research result is not a finish
 
-A research-only task's result is a report, and saving it finishes nothing. An agent may save an interim report, add to
-it, and keep asking. While the task waits, the report already has its link (the task panel's **Report**), so you can
-read what it has so far. The task is finished when its agent stops without saying it waits.
+A research-only task's result is its closing note, brought to the Coordinator's chat when the task ends
+([reports and research](research.md)). An agent that asks you something along the way says that it waits, and is not
+finished: the task is finished when its agent stops without saying it waits. A report file you asked for may be saved
+early and added to; while the task waits, it already has its link (the task panel's **Report**).
 
 ## Asking cannot dodge a review
 

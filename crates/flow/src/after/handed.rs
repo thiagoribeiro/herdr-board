@@ -1,7 +1,8 @@
-//! What a task that waited is told when it starts: for each task it waited for (on this machine or another), its id,
-//! title and closing note, and
-//! the pull request and merge commit where its work merged, or the report where it was research. Taken when the wait
-//! ends and kept on the task (`afterDone`), so a clean-up of the task before it loses nothing of it.
+//! What a task is told of the work before it: for each task it waited for (on this machine or another), or the one it
+//! follows up on (`followUp`), its id, title, closing note and last review's findings, and the pull request and merge
+//! commit where its work merged (its branch where it did not), or the report where it was research. What it waited for
+//! is taken when the wait ends and kept on the task (`afterDone`), so a clean-up of the task before it loses nothing of
+//! it. A coordinator hears of a task that ended in the same words (coordinator/ended.rs).
 use super::{after_of, say, stand_of, Stand};
 use crate::clock::now;
 use crate::flow::task::note_stat;
@@ -18,14 +19,20 @@ fn note_of(d: &Task) -> String {
     if let Ok(n) = std::fs::read_to_string(dir_of(d.s("id")).join("closing.md")) { if !n.trim().is_empty() { return n.trim().to_string(); } }
     [d.t("summary"), d.t("said")].into_iter().map(|s| s.trim().to_string()).find(|s| !s.is_empty()).unwrap_or_default()
 }
+/// At most NOTE_MAX characters, and a longer text says where it was cut and where the rest is.
+fn cut(text: &str, id: &str) -> String {
+    match text.char_indices().nth(NOTE_MAX) { Some((i, _)) => format!("{}\n[Cut here: board details {id} has the rest.]", &text[..i]), None => text.to_string() }
+}
 /// One task waited for, as it is now.
 pub fn of(id: &str) -> Value {
     if super::far::is_far(id) { return super::far::handed(id); } // a task of another machine: what it said last
     let Some(d) = get(id) else { return json!({ "id": id, "gone": true }) };
     let mut o = obj(json!({ "id": id, "title": d.at("title"), "repo": d.at("repo"), "done": stand_of(id) == Stand::Done, "stage": d.at("stage"), "research": is_research(&d) }));
-    let note: String = note_of(&d).chars().take(NOTE_MAX).collect();
+    let note = cut(&note_of(&d), id);
     if !note.is_empty() { o.put("note", note); }
     if d.b("pr") { o.put("pr", d.at("pr").clone()); }
+    if d.b("branch") { o.put("branch", d.at("branch").clone()); }
+    if let Some(rv) = crate::store::reviews::current_review(&d) { let f = cut(&crate::gate::findings_text(rv, true), id); if !f.trim().is_empty() { o.put("review", f); } }
     if d.b("prMerged") || d.s("prState") == "merged" || d.b("mergeCommit") { o.put("merged", true); }
     if d.b("mergeCommit") { o.put("commit", d.at("mergeCommit").clone()); }
     if d.at("report").b("link") { o.put("report", d.at("report").at("link").clone()); }
@@ -40,27 +47,39 @@ pub fn hand_over(t: &mut Task, early: bool) {
     for k in ["afterLeft", "afterBlocked"] { t.del(k); }
     t.put("stage", "queued"); t.put("queuedAt", now()); t.put("msg", "");
 }
-/// The part of the first prompt that hands over what came before: nothing for a task that waited for nothing.
+/// The part of the first prompt that hands over what came before: nothing for a task that waited for nothing and
+/// follows up on nothing.
 pub fn words(t: &Obj) -> String {
-    let list = t.arr("afterDone");
-    if list.is_empty() { return String::new(); }
-    let mut out = vec![if t.b("afterEarly") {
-        "This task was to wait for the tasks below to be done, and the human started it before they all were. Take in what is there of their work, and leave alone what is not done yet.".to_string()
-    } else { "This task waited for the tasks below to be done, and they are. It builds on their work: take it in (fetch it, read it, follow what it changed) before you go on.".to_string() }];
-    for d in list {
-        let id = d.t("id");
-        if d.b("gone") { out.push(format!("- {}: removed from the board, nothing is known of it.", say(&id))); continue; }
-        let on = if d.b("machine") { format!(" on {}", d.s("machine")) } else { String::new() };
-        let mut line = format!("- {} \"{}\" (repo {}{on}): {}", say(&id), d.s("title"), d.s("repo"), if d.b("done") { "done" } else { "not done yet" });
-        if d.b("merged") {
-            line.push_str(", its work merged");
-            if d.b("pr") { line.push_str(&format!(": pull request {}", d.s("pr"))); }
-            if d.b("commit") { line.push_str(&format!(", merge commit {}", d.s("commit"))); }
-        } else if d.b("pr") { line.push_str(&format!(", pull request {} (not merged)", d.s("pr"))); }
-        if d.b("report") { line.push_str(&format!(", {}report: {}", if d.b("research") { "research only, its " } else { "its " }, d.s("report"))); }
-        line.push('.');
-        if d.b("note") { line.push_str(&format!(" Its closing note:\n{}", d.s("note").lines().map(|l| format!("    {l}")).collect::<Vec<_>>().join("\n"))); }
-        out.push(line);
+    let mut out: Vec<String> = vec![];
+    if t.b("followUp") {
+        out.push("This task follows up on the task below: it continues that work. Start from what it did (its change, its pull request, its closing note, its review), and keep to that scope unless this task's description says otherwise.".to_string());
+        out.push(format!("- {}", line(&of(t.s("followUp")))));
     }
+    let list = t.arr("afterDone");
+    if list.is_empty() { return out.join("\n"); }
+    if !out.is_empty() { out.push(String::new()); }
+    out.push(if t.b("afterEarly") {
+        "This task was to wait for the tasks below to be done, and the human started it before they all were. Take in what is there of their work, and leave alone what is not done yet.".to_string()
+    } else { "This task waited for the tasks below to be done, and they are. It builds on their work: take it in (fetch it, read it, follow what it changed) before you go on.".to_string() });
+    out.extend(list.iter().map(|d| format!("- {}", line(d))));
     out.join("\n")
+}
+/// One task as handed over (`of`): where it stands, its pull request or report, its closing note and its review.
+pub fn line(d: &Value) -> String {
+    let id = d.t("id");
+    if d.b("gone") { return format!("{}: removed from the board, nothing is known of it.", say(&id)); }
+    let on = if d.b("machine") { format!(" on {}", d.s("machine")) } else { String::new() };
+    let mut line = format!("{} \"{}\" (repo {}{on}): {}", say(&id), d.s("title"), d.s("repo"), if d.b("done") { "done" } else { "not done yet" });
+    if d.b("merged") {
+        line.push_str(", its work merged");
+        if d.b("pr") { line.push_str(&format!(": pull request {}", d.s("pr"))); }
+        if d.b("commit") { line.push_str(&format!(", merge commit {}", d.s("commit"))); }
+    } else if d.b("pr") { line.push_str(&format!(", pull request {} (not merged)", d.s("pr"))); }
+    if d.b("branch") && !d.b("merged") { line.push_str(&format!(", its work on branch {}", d.s("branch"))); }
+    if d.b("report") { line.push_str(&format!(", {}report: {}", if d.b("research") { "research only, its " } else { "its " }, d.s("report"))); }
+    line.push('.');
+    let indent = |s: &str| s.lines().map(|l| format!("    {l}")).collect::<Vec<_>>().join("\n");
+    if d.b("note") { line.push_str(&format!(" Its closing note:\n{}", indent(d.s("note")))); }
+    if d.b("review") { line.push_str(&format!("\n  Its last review:\n{}", indent(d.s("review")))); }
+    line
 }

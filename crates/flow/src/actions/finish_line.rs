@@ -278,6 +278,7 @@ pub fn details(id: &str) -> Res<Value> {
     if t.b("checksWait") { let w = t.at("checksWait"); out.put("checksWaitingFor", json!(crate::land::checks::unique(strings(w.at("names")).into_iter().chain(strings(w.at("flows")))))); }
     // What it waits for, or waited for (after.rs): each task as it stands now, and what was handed over when it started.
     if t.b("after") || t.b("afterDone") { out.put("after", json!({ "waitsFor": t.at("after"), "waiting": t.s("stage") == crate::after::STAGE, "left": t.at("afterLeft"), "waitsForYou": t.at("afterBlocked"), "notReachable": crate::after::far::unreachable(&strings(t.at("afterLeft"))), "tasks": crate::after::after_of(&t).iter().map(|i| crate::after::handed::of(i)).collect::<Vec<_>>(), "handedOver": t.at("afterDone"), "early": t.b("afterEarly") })); }
+    if t.b("followUp") { out.put("followUp", crate::after::handed::of(t.s("followUp"))); } // the task it continues
     // Done several times at once: each attempt, where it stands, and what the reviewer said of them.
     if !t.arr("attempts").is_empty() {
         let n = now();
