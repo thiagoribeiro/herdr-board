@@ -130,6 +130,8 @@ same file), and when you start the program in that folder by hand.
   program. A flag is gone with the process, must be passed again by whoever starts the program, and Codex's could not
   carry this much text on one launch line. With the file in place, a flag would say the same thing twice. Only a kind
   the board does not know, which may or may not read `AGENTS.md`, also gets the pointing line.
+- **Notes beyond the board.** `coordinator.notes` points it at a folder of your own notes to read, and
+  `coordinator.notesWrite` at a folder of its own to keep notes in across chats ([its notes](coordinator-notes.md)).
 - **Working agents and reviewers are different.** They work in your repo, whose `AGENTS.md` is yours, so their rules
   still ride on their launch.
 

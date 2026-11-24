@@ -48,6 +48,22 @@ impl Fake for FakeHerdr {
     fn alive(&self, pid: i64) -> Option<bool> { [2, 3].contains(&pid).then(|| !self.st.borrow().arr("killed").contains(&json!(pid))) }
     /// The herdr program cannot be found from here (`noProgram`): run where it is not on PATH nor anywhere usual.
     fn found(&self) -> bool { !self.st.borrow().b("noProgram") }
+    /// herdr's socket: `workspace.move_block` puts the spaces named, in their order, before another (none: at the end),
+    /// as herdr 0.9.5 does. Each move is noted (`moves`).
+    fn ask(&self, method: &str, params: &Value) -> Result<Value, sw::herdr::cli::HerdrError> {
+        let no = |code: &str| sw::herdr::cli::HerdrError { code: code.into(), message: format!("{method}: {code}") };
+        if method != "workspace.move_block" { return Err(no("no_server")); }
+        let mut st = self.st.borrow_mut();
+        let ids: Vec<String> = params.arr("workspace_ids").iter().map(text).collect();
+        let all = st.arr("workspaces").to_vec();
+        let Some(moved) = ids.iter().map(|id| all.iter().find(|w| w.s("workspace_id") == id).cloned()).collect::<Option<Vec<Value>>>() else { return Err(no("workspace_not_found")) };
+        let mut rest: Vec<Value> = all.into_iter().filter(|w| !ids.contains(&w.t("workspace_id"))).collect();
+        let at = rest.iter().position(|w| params.b("before_workspace_id") && w.at("workspace_id") == params.at("before_workspace_id")).unwrap_or(rest.len());
+        rest.splice(at..at, moved);
+        st["workspaces"] = json!(rest);
+        arr(&mut st, "moves").push(json!(ids));
+        Ok(json!({ "type": "workspace_list" }))
+    }
 }
 impl FakeHerdr {
     pub fn ws_out(st: &Value, w: &Value) -> Value {
