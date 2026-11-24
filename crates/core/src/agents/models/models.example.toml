@@ -1,0 +1,66 @@
+# The catalog of models of herdr-board: the entries a task can be routed to (docs/models.md#catalog-and-routing).
+# This file is yours: change it to what you have. `herdr-board models catalog` shows it as the board reads it, with
+# what each entry costs and how it fared lately, and names any entry it refuses (that entry is then not used).
+#
+# Each [[entry]]:
+#   name         one word, what --route names (leve, padrao, pesado)
+#   agent        a program with an optional model after a slash, as `herdr-board set worker.agent` takes it
+#   effort       one its program takes (`herdr-board models <program>` lists them), or "default"
+#   cost         relative cost, any scale (1, 3, 10)
+#   good_for     free words the Coordinator reads to pick an entry: what this one is good for
+#   avoid_for    free words: what not to give it
+#   escalate_to  the entry that takes over when this one's work fails review (route.escalateAfter) or it cannot go on
+#   max_files, max_minutes   optional signals for the Coordinator: roughly how big a task this one is for
+#
+# Only some programs here? List them, and any other is refused wherever it is named (settings too):
+# [allow]
+# agents = ["claude"]
+
+[[entry]]
+name = "leve"
+agent = "claude/haiku"
+effort = "low"
+cost = 1
+good_for = "typo, texto, documentação, renomear, ajuste de configuração, mudança pequena em 1 ou 2 arquivos sem lógica nova"
+avoid_for = "concorrência, migração de dados, segurança, refator amplo, bug sem reprodução clara"
+escalate_to = "padrao"
+max_files = 3
+max_minutes = 20
+
+[[entry]]
+name = "padrao"
+agent = "claude/sonnet"
+effort = "medium"
+cost = 3
+good_for = "feature média, bug com reprodução clara, testes, refator pequeno em poucos arquivos"
+avoid_for = "arquitetura nova, concorrência difícil, bug sem pista, mudança que atravessa o sistema inteiro"
+escalate_to = "pesado"
+max_files = 10
+
+[[entry]]
+name = "pesado"
+agent = "claude/opus"
+effort = "high"
+cost = 10
+good_for = "arquitetura, concorrência, migrações, segurança, bug difícil sem reprodução, refator grande"
+avoid_for = "trabalho trivial: paga caro por pouco"
+
+# Other programs, for those who have them: take the # off and set a model your sign-in has
+# (`herdr-board models codex` lists them).
+#
+# [[entry]]
+# name = "codex"
+# agent = "codex/<model>"
+# effort = "medium"
+# cost = 4
+# good_for = "feature média em código que o Codex conhece bem"
+# avoid_for = "tarefas que precisam de muito contexto do repo"
+# escalate_to = "pesado"
+#
+# [[entry]]
+# name = "pi"
+# agent = "pi/<provider>/<model>"
+# cost = 2
+# good_for = "mudanças pequenas"
+# avoid_for = "qualquer coisa difícil"
+# escalate_to = "padrao"

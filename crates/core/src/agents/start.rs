@@ -27,6 +27,7 @@ pub struct StartOpts { pub model: String, pub effort: String, pub fast: Option<b
 /// The arguments a worker, a reviewer or the Coordinator of this kind is started with. `resume` reopens a known
 /// conversation; `session` names a new one; `extra` are the hook and standing-rule arguments; `folder` is where it starts.
 pub fn start_args(k: &str, o: &StartOpts) -> Res<Vec<String>> {
+    if let Some(why) = super::models::allow::start_refusal(k) { return Err(crate::err::Error::refused(why)); }
     let mut out: Vec<String> = kind(k).map(|a| super::kinds::fill(a.lead, "")).unwrap_or_default(); // `hermes chat`
     if !o.resume.is_empty() { out.extend(resume_args(k, &o.resume)); } // first: Codex's `resume` is a subcommand
     if o.resume.is_empty() { out.extend(session_args(k, &o.session)); out.extend(fresh_args(k)); }

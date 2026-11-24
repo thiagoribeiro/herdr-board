@@ -55,7 +55,7 @@ pub fn handover_prompt(t: &Task, from: &str, why: &str, findings: &str) -> Strin
     ].into_iter().filter(|s| !s.is_empty()).collect::<Vec<_>>().join("\n\n")
 }
 /// What a hand-over changes on the task, put back whole when the next agent cannot be started.
-const KEPT: [&str; 23] = ["agent", "app", "on", "tried", "session", "transcript", "handled", "agentVersion", "hooked", "model", "usage", "failure", "waiting", "cutRetry", "checkFails", "reviewRounds", "kind", "watch", "review", "mergeIntent", "requireApproval", "fallbacks", "handovers"];
+const KEPT: [&str; 24] = ["route", "agent", "app", "on", "tried", "session", "transcript", "handled", "agentVersion", "hooked", "model", "usage", "failure", "waiting", "cutRetry", "checkFails", "reviewRounds", "kind", "watch", "review", "mergeIntent", "requireApproval", "fallbacks", "handovers"];
 /// Hand the task to the next agent on `worker.fallback`, read now. `why`: why the one on it cannot go on, in plain
 /// words. `findings`: what is open, when the caller knows it better than the saved review. True when another agent is
 /// on it; false when nobody took over, and the caller goes on as it always did.
@@ -89,6 +89,7 @@ pub fn hand_over_to(id: &str, g: &mut Guard, why: &str, findings: &str, first: O
         let mut entry = Value::Null;
         t = g.set(|t| {
             entry = log_handover(t, "worker", &from, &next, why);
+            crate::store::route::on_handover(t, &next); // the next entry of a routed task's chain, with its effort
             t.put("on", next.clone()); t.put("tried", tried.clone()); t.put("agent", k.clone()); t.put("app", k.clone());
             t.put("session", Value::Null); t.put("transcript", Value::Null);
             let h = t.obj_mut("handled"); h.put("msg", Value::Null); h.put("pos", 0);
