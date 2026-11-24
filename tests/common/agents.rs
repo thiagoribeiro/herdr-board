@@ -186,7 +186,7 @@ fn run(f: &F, pi: usize, prompt: &str, step: Value) {
     let mut st = f.st.borrow_mut();
     if step.b("session") { st["panes"][pi]["agent"]["session"] = step.at("session").clone(); }
     if step.b("screen") { st["panes"][pi]["agent"]["screen"] = step.at("screen").clone(); }
-    if step.b("exit") { st["panes"][pi]["agent"] = Value::Null; return; }
+    if step.b("exit") { if step.b("screen") { st["panes"][pi]["screen"] = step.at("screen").clone(); } st["panes"][pi]["agent"] = Value::Null; return; } // what it printed stays on the pane's screen
     if step.b("closed") { arr(&mut st, "panes").remove(pi); F::drop_empty(&mut st); return; } // its terminal closed
     if step.at("then").is_object() { let a = &mut st["panes"][pi]["agent"]; a["then"] = step.at("then").clone(); a["thenIn"] = json!(if step.has("after") { step.i("after") } else { 3 }); }
     let status = if step.b("status") { step.t("status") } else { "done".into() };

@@ -61,6 +61,7 @@ pub fn pick(out: &mut Obj, s: &Show) {
     if s.stale { out.put("stale", true); } else { out.del("stale"); }
     if s.exited { out.put("exited", true); } else { out.del("exited"); }
     match &s.limits { Some(l) => out.put("limits", l.clone()), None => out.del("limits") }
+    match &s.stall { Some(x) => out.put("stall", json!(x)), None => out.del("stall") }
 }
 /// A task as the board and `list` show it: the task plus its derived state. A task done several times at once carries
 /// its attempts as `tries`, each as the board shows it.

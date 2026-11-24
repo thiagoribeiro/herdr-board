@@ -15,10 +15,16 @@ pub fn snapshot(t: &Obj) -> Value {
         v["review"] = json!({ "head": r.at("head"), "meets": r.at("meets"), "text": crate::store::tasks::one_line(r.s("text"), 400),
             "findings": r.arr("findings").iter().map(|f| json!({ "id": f.at("id"), "severity": f.at("severity"), "subject": crate::store::tasks::one_line(f.s("subject"), 400) })).collect::<Vec<_>>() });
     }
+    let status = crate::shown::turn::status_of(t, crate::clock::now());
+    for k in ["state", "whose", "next", "since", "for", "stall"] { v[k] = status.at(k).clone(); }
     v.as_object_mut().unwrap().retain(|_, x| !x.is_null());
     v
 }
 pub fn next_step(t: &Obj) -> (&'static str, String) {
+    if crate::stall::stall_of(t, crate::clock::now()).is_some() {
+        let r = crate::shown::states::as_row(t);
+        return (match crate::shown::turn::whose(&r) { "you" => "human", "agent" => "agent", "github" => "github", _ => "board" }, crate::shown::turn::next_step(&r));
+    }
     if t.s("stage") == "working" && (t.at("live").b("down") || t.at("live").b("gone")) { return ("board", "Agent unavailable; inspect its last saved state".into()); }
     if t.s("stage") == "working" && t.at("live").s("status") == "blocked" { return ("human", "Answer the agent's dialog".into()); }
     if t.at("waiting").b("until") { return ("provider", format!("Retry after {}: {}", t.at("waiting").i("until"), t.at("waiting").s("reason"))); }

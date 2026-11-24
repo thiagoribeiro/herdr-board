@@ -18,6 +18,7 @@ fn stage_line(stage: &str) -> &'static str {
 pub struct Show {
     pub state: &'static str, pub kind: Option<String>, pub msg: String, pub app: String, pub progress: Option<f64>, pub eta: Option<i64>,
     pub plain: bool, pub review: bool, pub stale: bool, pub exited: bool, pub reviewing: bool, pub plan: bool, pub limits: Option<Value>,
+    pub stall: Option<crate::stall::Stall>,
 }
 /// Whom the Watcher follows in a stage: the reviewer under review, the agent at work.
 pub fn role_of(t: &Obj) -> &'static str { match t.s("stage") { "reviewing" => "reviewer", "working" => "agent", _ => "" } }
@@ -46,7 +47,8 @@ fn worked(t: &Obj, live: &Value) -> bool {
 }
 /// `live` describes the task's worker pane right now: { status } (herdr's agent status), { status: null } (no agent
 /// in it), { gone }, { away: session }, { down }, or null (not looked up: a task with no agent).
-pub fn show(t: &Obj, live: &Value, now: i64) -> Show {
+pub fn show(t: &Obj, live: &Value, now: i64) -> Show { Show { stall: crate::stall::stall_of(t, now), ..show_live(t, live, now) } }
+fn show_live(t: &Obj, live: &Value, now: i64) -> Show {
     // A guess left over from the other role is not shown as this one's.
     let role = role_of(t);
     let watch = if !role.is_empty() && t.at("watch").b("role") && t.at("watch").s("role") != role { &NULL } else { t.at("watch") };

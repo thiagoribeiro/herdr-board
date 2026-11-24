@@ -5,5 +5,6 @@ pub mod queue;
 pub mod review_words;
 pub mod row_says;
 pub mod states;
+pub mod turn;
 pub mod words;
 pub mod wrap;

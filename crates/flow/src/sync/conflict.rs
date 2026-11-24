@@ -1,5 +1,7 @@
 //! A real conflict with main: the saved failure (the row, the details and ctrl+r show and send it), the words for the
-//! agent, and sending it back as the board's own turn, at most `review.rounds` times in a row.
+//! agent, and sending it back as the board's own turn, at most `review.rounds` times in a row, under
+//! `merge.fixConflicts` (off: it waits for you). One path for every conflict: found by the board's own merge, or by
+//! GitHub (housekeeping/prs.rs starts this sync then).
 use super::conflict_log::conflict_found;
 use super::{seen_patch, Synced};
 use crate::clock::now;
@@ -36,7 +38,7 @@ pub fn conflict_back(id: &str, g: &mut Guard, tree: &str, r: &Synced, held: &mut
     let rounds = setting("review.rounds", Some(&t)).as_i64().unwrap_or(3);
     let repairs = t.i("syncRepairs");
     let failure = conflict_failure(&t, tree, r);
-    let can = !r.files.is_empty() && r.restored && flow::task::is_agent_task(&t);
+    let can = !r.files.is_empty() && r.restored && flow::task::is_agent_task(&t) && setting("merge.fixConflicts", Some(&t)) == json!(true);
     let live = flow::live::assert_live(&t).is_ok() && flow::task::h(&t).agent_get(t.at("link").s("pane")).ok().flatten().is_some();
     if can && live && repairs < rounds {
         let saved = failure_patch(&failure);
