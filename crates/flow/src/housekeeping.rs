@@ -62,6 +62,7 @@ fn pass(socket: &str, force: Force) {
             if due(&format!("tidy-{}", key(t.s("id"))), 30000) { spawn_runner("cleanup", t.s("id"), if t.at("tidy").s("deleteBranch") == "merged" { &["--merged"] } else { &[] }); }
         }
         crate::notify::notify_pass(&list(ListOpts::default()));
+        crate::coordinator::ended::ended_pass(&tasks, socket); // a task's run ended: its coordinator hears it
         resync(&tasks, socket);
         // A chat that changed the code, and you are done with it: its one review (finish/chat.rs).
         crate::finish::chat::chat_pass(&tasks, socket);

@@ -49,6 +49,9 @@ Every command accepts `--json`. Below, `herdr-board` stands for that path.
   --delegate`, `delegate <id> --after …`) it is queued after them and starts by itself once they are done, its agent
   told what they did. `after <id> <id>[,…]` changes what it waits for, `after <id> --clear` drops the wait;
   `delegate <id> --now` starts it regardless. Only when the human asks.
+- A request that continues earlier work ("review it", "now adjust X", "do the same for Y"): `add … --follow-up <id>`
+  names the task it continues, and its agent is handed that task's change, pull request, closing note and review. Not
+  sure which task, or how far the request reaches? Ask the human first.
 - `herdr-board show [<id>]`: every setting, its value and the place it came from (for one task, or the human's own).
   `herdr-board set <name> <value>` changes one for the human, `--repo <name>` for one repo, `--task <id>` for one
   task; `herdr-board unset <name>` (same options) puts it back. Only when the human asks.

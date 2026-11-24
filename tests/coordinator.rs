@@ -8,6 +8,8 @@ use serde_json::json;
 use sw::board::keys::key_name;
 use sw::json::*;
 
+/// A task's run that ended reaches its coordinator's chat; a follow-up is handed the task it continues.
+mod ended;
 /// tell where herdr cannot be found: queued, not delivered, and said so.
 mod notes;
 mod undelivered;

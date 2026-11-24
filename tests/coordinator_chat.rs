@@ -77,7 +77,8 @@ fn one_chat_for_everyone_space_on_a_task_talks_to_its_agent_otherwise_to_the_coo
     }
     // While you talk to a task's agent the chat stays that agent's: the Coordinator's reply waits in its own chat (no
     // green line under the chat says it: the board says nothing in green).
-    w.script(json!({ "coordinator": [{ "said": "All done." }] }));
+    // The board told it first that PRJ-1 ended (coordinator/ended.rs): it summed that up before your words.
+    w.script(json!({ "coordinator": [{ "said": "PRJ-1 is done." }, { "said": "All done." }] }));
     send(&w.root, "do something", false, "", &so).unwrap(); drain(); e.load();
     assert!(!e.text().contains("The Coordinator replied."), "{}", e.text()); assert!(!e.text().contains("All done.")); assert!(!look(&so).unseen.is_empty());
     // What you type there is for that agent, not for the Coordinator.

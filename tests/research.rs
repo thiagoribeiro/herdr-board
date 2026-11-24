@@ -26,19 +26,19 @@ fn a_research_task_that_changed_the_repo_is_sent_back_and_after_its_rounds_waits
     assert!(t.at("failure").s("next").contains("herdr-board set research.only false --task proj/1) and delegates it again"));
     let said = all_prompts(&w, &t);
     assert_eq!(said.matches("This task is research only, and you changed the repo").count(), 1);
-    assert!(said.contains(&format!("save the report in {}/ (outside the repo)", sw::store::files::reports_dir().join("proj").join("1").display())), "{said}");
+    assert!(said.contains("Move the result out of the repo, into your closing note"), "{said}");
     assert!(!t.b("pr"));
     assert_eq!(git(&w.root, &["ls-remote", "origin"]).lines().filter(|l| l.contains("work/")).count(), 0, "nothing pushed");
     let tree = std::path::Path::new(t.s("worktree"));
     assert!(tree.join("notes.txt").exists(), "left as the agent left it");
-    // Every change undone, the step is tried again: done, with nothing to merge, and the line says no report was found.
+    // Every change undone, the step is tried again: done, with nothing to merge, its closing note its result.
     git(tree, &["reset", "-q", "--hard", t.s("baseSha")]);
     std::fs::remove_file(tree.join("notes.txt")).ok();
     assert_eq!(sw::research::changes_of(&t, tree), Some(vec![]));
     sw::actions::finish_line::retry(&id).unwrap();
     let t = settle(&id);
     assert_eq!(t.s("stage"), "done", "{}", t.at("failure"));
-    assert!(t.s("msg").contains("Looked again. No report was found."), "{}", t.s("msg"));
+    assert!(t.s("msg").contains("Looked again.") && !t.s("msg").contains("No result was found"), "{}", t.s("msg"));
 }
 
 #[test]

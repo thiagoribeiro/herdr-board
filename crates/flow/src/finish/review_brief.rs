@@ -24,7 +24,7 @@ pub fn review_brief(t: &Obj, b: &Brief) -> String {
     let head = b.change.map(|c| c.t("head")).unwrap_or_default();
     let desc: String = t.s("description").chars().take(3000).collect();
     let said: String = b.text.chars().take(2000).collect();
-    let where_ = if is_research(t) { review_rule(t) } else {
+    let where_ = if is_research(t) { review_rule(t, &crate::flow::task::note_file(t)) } else {
         format!("{} Read the changed files and what surrounds them. Then actually exercise the change: run it, run its tests, open it in a browser if it has a screen, try the awkward inputs. Check it against what was asked: does it do all of it, correctly? Does it break anything nearby? Ignore taste and style nits.",
             if b.to_land { "You are in the repository, on the branch with the change, with all your tools." } else { "You are in the folder where the work was done, with all your tools. There is no diff: find what the agent made or changed from what it says below." })
     };

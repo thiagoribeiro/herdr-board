@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+### The Coordinator
+
+- When a task's run ends (ready to approve, done, failed, stopped at a limit), the board puts its closing note, pull
+  request and review in the chat of the coordinator that added it, as a `Board:` message, and the coordinator sums it
+  up for you there. A research task's result is that summary: its content, never a link or a file
+  ([the Coordinator](docs/coordinator.md#when-a-task-ends-it-tells-you-in-the-chat)).
+- A request that continues a task is a follow-up of it: `add … --follow-up <id>` keeps the link (`details` shows it)
+  and hands the new task's agent that task's change, pull request or branch, closing note and review, to keep to that
+  scope. The Coordinator asks you first when it is not sure which task, or how far
+  ([continuing earlier work](docs/coordinator.md#continuing-earlier-work)).
+
+### Research
+
+- A research result, and any report, is the agent's closing note, brought to the Coordinator's chat. A file in the
+  task's reports folder, with its private link, only when you ask for one ([reports and research](docs/research.md)).
+
 ### Herdr's sidebar
 
 - Task agents stand in a tree under the coordinator that added them (the Coordinator, the machine's or a project's):

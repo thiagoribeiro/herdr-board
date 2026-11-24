@@ -49,6 +49,8 @@ pub fn command(cmd: &str, a: &Args) -> Res<(Value, String)> {
             let from = me.as_ref().map(|c| c.0.t("id")).unwrap_or_default();
             // What it is to wait for is checked before it is added: a refused --after adds nothing.
             let after = flag("after").map(|r| crate::after::checked(None, &crate::after::refs_of(&r))).transpose()?;
+            // The task it continues (docs/coordinator.md): its agent is handed that task's work (after/handed.rs).
+            let follow = flag("follow-up").map(|r| crate::store::tasks::find(&r).map(|d| d.t("id"))).transpose()?;
             let opts = filing::AddOpts { description: flag("desc").or_else(|| flag("description")).unwrap_or_default(), repo: flag("repo").unwrap_or_default(), research, settings, from };
             // On another machine the board knows (remote/add.rs); in an autopilot turn within its limits (autopilot/add.rs).
             if let Some(on) = flag("on") { return add_on(&on, &rest(1), opts, flags.b("delegate"), pilot.as_ref()); }
@@ -64,6 +66,7 @@ pub fn command(cmd: &str, a: &Args) -> Res<(Value, String)> {
             if !flags.b("delegate") && !crate::util::env_set("HERDR_PLUGIN_ID") { if let Some(p) = crate::util::env_val("HERDR_PANE_ID") { tab = crate::coordinator::requests::tab_turn(&p, &current_socket()); } }
             let after = after.filter(|d| !d.is_empty());
             if let Some(d) = &after { crate::store::tasks::set(t.s("id"), json!({ "after": d }))?; }
+            if let Some(f) = &follow { crate::store::tasks::set(t.s("id"), json!({ "followUp": f }))?; }
             let on = if flags.b("delegate") || tab || start {
                 let d = start::delegate(t.s("id"), vec![])?;
                 let how = crate::after::waiting_words(&d).map(|w| format!(", it {w}")).unwrap_or_else(|| ", an agent is on it".into());

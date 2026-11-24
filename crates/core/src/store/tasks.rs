@@ -128,7 +128,7 @@ pub fn create(folder: &Path, title: &str, description: &str, owner: Option<&str>
         let now = now();
         let task = obj(json!({ "id": format!("{name}/{n}"), "repo": name, "n": n, "root": root.display().to_string(), "title": t.title,
             "description": t.description, "owner": owner.map(String::from).unwrap_or_else(me), "app": null,
-            "stage": "todo", "msg": "", "created": now, "at": now, "pinned": false, "archivedAt": null, "settings": {} }));
+            "stage": "todo", "msg": "", "news": true, "created": now, "at": now, "pinned": false, "archivedAt": null, "settings": {} }));
         save(&task)?;
         Ok(task)
     })

@@ -73,6 +73,40 @@ When it acted on the board, its message ends with one short line naming the ids 
 title, a description, settings), removed, started an agent, approved, archived, restored. For example: "Added proj/12
 and started an agent on it". The commands answer in the same words ([roles and commands](roles-and-commands.md)).
 
+## When a task ends, it tells you in the chat
+
+When a task's run ends (it is ready to approve, done, failed, or stopped at a [limit](limits.md)), the board puts one
+message in the chat of the coordinator that added it (the Coordinator for a task you added yourself). The message is
+the board's, not yours: it starts with `Board:`, the chat shows it under the board's name with its first line only
+(`PRJ-1 is ready to approve.`), and it carries what a follow-up is handed: the task's closing note, its pull request or
+branch, and its last review's findings. The Coordinator answers it with a short summary for you, right there: what the
+task did and changed, its tests, its pull request, and what is left open.
+
+- **A research-only task's result is the summary itself**: its findings in the chat, never a link or a file
+  ([reports and research](research.md)).
+- **Once per run.** Approving and merging what was ready to approve tells nothing new; a task sent back that ends again
+  tells again.
+- **Nothing is started for it.** A coordinator that was never talked to hears nothing, and a stopped one keeps the
+  message waiting until you talk to it. Only tasks added since this version tell their end: an update does not flood
+  the chat with old ones.
+
+## Continuing earlier work
+
+A request that continues a task ("review it", "now change X", "do the same for Y") is read in the light of the
+conversation and of that task. The Coordinator adds it as a follow-up of the task it continues:
+
+```
+herdr-board add "Review the parser change" --research --follow-up PRJ-1
+```
+
+- The board keeps the link (`details <id>` shows it as `followUp`), and the new task's agent is handed that task's work
+  when it starts: its id and title, its pull request and merge commit or its branch, its closing note and its last
+  review's findings, with the rule to keep to that scope. "Review the code" right after PRJ-1 finished is a review of
+  PRJ-1's change, not an audit of the whole repo.
+- For a task whose agent is still on it, the Coordinator tells that agent instead (`board tell <id> …`).
+- **When it is not sure** which task the request continues, or how far it reaches, it asks you before it adds or
+  delegates anything.
+
 ## Going into it
 
 On the board you see only what it said and what you said, never its program's screen ([the board](board.md)). For the
