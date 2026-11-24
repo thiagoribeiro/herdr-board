@@ -9,6 +9,7 @@ use sw::board::keys::key_name;
 use sw::json::*;
 
 /// tell where herdr cannot be found: queued, not delivered, and said so.
+mod notes;
 mod undelivered;
 
 pub fn coord_world() -> World {

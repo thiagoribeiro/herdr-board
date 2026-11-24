@@ -13,6 +13,7 @@ pub mod requests;
 pub mod rules;
 pub mod rules_autopilot;
 pub mod rules_news;
+pub mod rules_notes;
 pub mod rules_place;
 pub mod sidebar;
 pub mod state;
