@@ -77,16 +77,19 @@ and started an agent on it". The commands answer in the same words ([roles and c
 
 When a task's run ends (it is ready to approve, done, failed, or stopped at a [limit](limits.md)), the board puts one
 message in the chat of the coordinator that added it (the Coordinator for a task you added yourself). The message is
-the board's, not yours: it starts with `Board:`, the chat shows it under the board's name with its first line only
+the board's, not yours: it starts with `Board:` (words of yours that start so are marked as not the board's), the chat shows it under the board's name with its first line only
 (`PRJ-1 is ready to approve.`), and it carries what a follow-up is handed: the task's closing note, its pull request or
 branch, and its last review's findings. The Coordinator answers it with a short summary for you, right there: what the
 task did and changed, its tests, its pull request, and what is left open.
 
 - **A research-only task's result is the summary itself**: its findings in the chat, never a link or a file
   ([reports and research](research.md)).
+- **A long note is cut** at 4000 characters, with a line saying so; the Coordinator reads the rest with
+  `details <id>`.
 - **Once per run.** Approving and merging what was ready to approve tells nothing new; a task sent back that ends again
   tells again.
-- **Nothing is started for it.** A coordinator that was never talked to hears nothing, and a stopped one keeps the
+- **Only a coordinator you have talked to hears it.** One that was never talked to hears nothing. One whose program
+  exited is started again for it, in the same conversation, as for a message of yours; one you stopped keeps the
   message waiting until you talk to it. Only tasks added since this version tell their end: an update does not flood
   the chat with old ones.
 

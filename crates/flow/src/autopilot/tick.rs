@@ -35,7 +35,7 @@ fn seen(co: &Co, c: &Obj) -> Option<(bool, Value)> {
     let a = Herdr::new(Some(co.socket.clone())).agent_get(c.s("pane")).ok().flatten()?;
     Some((["idle", "done"].contains(&a.s("agent_status")), a.at("completion_seq").clone()))
 }
-fn mine(m: &Value) -> bool { !m.b("autopilot") }
+fn mine(m: &Value) -> bool { !crate::coordinator::ended::by_board(m) }
 pub fn tick(co: &Co, board: &[Obj], now: i64) {
     let Some(c) = get(co) else { return };
     let look = seen(co, &c);

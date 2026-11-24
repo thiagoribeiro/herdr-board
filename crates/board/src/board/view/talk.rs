@@ -79,10 +79,9 @@ pub fn preview(r: &Obj) -> Preview {
 }
 /// The Coordinator's conversation, in the same parts.
 pub fn coord_talk(v: &crate::coordinator::look::Look, screen: &str) -> (Vec<Part>, bool, bool, bool) {
-    // An autopilot wake is no words of yours: it stands under its own name, as the board's words do, and says only why
-    // it woke (autopilot/wake.rs).
-    let mut parts: Vec<Part> = v.talk.iter().map(|m| if m.you && crate::autopilot::wake::is_wake(&m.text) { Part { by: "Autopilot".into(), text: sent(&crate::autopilot::wake::said(&m.text)), whole: m.text.clone(), sent: true, ..Default::default() } }
-        else if m.you && crate::coordinator::ended::is_ended(&m.text) { Part { by: "Board".into(), text: sent(&crate::coordinator::ended::said(&m.text)), whole: m.text.clone(), sent: true, ..Default::default() } }
+    // An autopilot wake or a task that ended is no words of yours: it stands under its own name, as the board's words
+    // do, and says only why (coordinator/ended.rs).
+    let mut parts: Vec<Part> = v.talk.iter().map(|m| if let Some((by, said)) = m.you.then(|| crate::coordinator::ended::shown_as(&m.text)).flatten() { Part { by: by.into(), text: sent(&said), whole: m.text.clone(), sent: true, ..Default::default() } }
         else if m.you { Part { by: "You".into(), text: sent(&m.text), whole: m.text.clone(), sent: true, ..Default::default() } } else { Part { by: "Coordinator".into(), text: m.text.clone(), ..Default::default() } }).collect();
     if !parts.iter().any(|p| !p.sent) && !v.said.is_empty() { parts.push(Part { by: "Coordinator".into(), text: v.said.clone(), ..Default::default() }); }
     // A program whose conversation cannot be read: the words on its screen.

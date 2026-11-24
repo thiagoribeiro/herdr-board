@@ -72,7 +72,7 @@ pub fn send_as(cwd: &Path, text: &str, delegate: bool, about: &str, co: impl Int
     herdr_up(&co.socket)?;
     let root = known(&co)?;
     let ctx = context(root.as_deref().unwrap_or(cwd), delegate, about)?;
-    let text = &crate::autopilot::wake::escape(text);
+    let text = &super::ended::escape(text);
     let c = change(&co, |c| {
         let mut q = c.arr("queue").to_vec();
         q.push(json!({ "id": crate::util::uuid(), "text": if delegate { format!("{text}\n\n{}", tab_note()) } else { text.to_string() }, "said": text, "where": ctx, "at": now(), "sender": sender }));

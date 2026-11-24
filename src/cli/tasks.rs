@@ -53,7 +53,7 @@ pub fn command(cmd: &str, a: &Args) -> Res<(Value, String)> {
             let follow = flag("follow-up").map(|r| crate::store::tasks::find(&r).map(|d| d.t("id"))).transpose()?;
             let opts = filing::AddOpts { description: flag("desc").or_else(|| flag("description")).unwrap_or_default(), repo: flag("repo").unwrap_or_default(), research, settings, from };
             // On another machine the board knows (remote/add.rs); in an autopilot turn within its limits (autopilot/add.rs).
-            if let Some(on) = flag("on") { return add_on(&on, &rest(1), opts, flags.b("delegate"), pilot.as_ref()); }
+            if let Some(on) = flag("on") { if follow.is_some() { crate::fail!("--follow-up names a task of this machine, so it cannot go with --on {on}: add the follow-up on the machine of the task it continues. Nothing was added."); } return add_on(&on, &rest(1), opts, flags.b("delegate"), pilot.as_ref()); }
             // In an autopilot turn: within its limits, and started at once by `autopilot.startAtOnce` (autopilot/add.rs).
             let (t, start, dropped) = match &pilot {
                 Some(co) => { let a = crate::autopilot::add::add(co, &here, &rest(1), opts, after.as_deref().unwrap_or(&[]), flags.b("delegate"))?; (a.task, a.start, crate::autopilot::add::dropped_words(&a.dropped)) }

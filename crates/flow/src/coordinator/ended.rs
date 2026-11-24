@@ -2,7 +2,7 @@
 //! Coordinator for one you added) hears it in its chat, once per run, with the task's closing note, pull request and
 //! review in the words a follow-up is handed (after/handed.rs). The message starts with `Board:`, and its rules have it
 //! tell the human there what the task did (docs/coordinator.md). Only a task added since the board does this (`news`)
-//! and a coordinator that was ever talked to hear it: nothing older is told all at once, and nothing is started for it.
+//! and a coordinator that was ever talked to hear it: nothing older is told all at once, and a coordinator that was stopped keeps it waiting.
 use super::co::Co;
 use super::state::{change, get};
 use crate::clock::now;
@@ -12,11 +12,19 @@ use crate::store::tasks::{update, Change, Task};
 
 /// The words a board message starts with.
 pub const WORDS: &str = "Board:";
-/// Is this the board's message (the chat shows it under the board's name, its first line only)?
-pub fn is_ended(text: &str) -> bool { text.starts_with(WORDS) }
 /// A message in a coordinator's queue that is the board's (an autopilot wake, a task that ended), not the human's words.
 pub fn by_board(m: &Value) -> bool { m.b("autopilot") || m.b("board") }
-pub fn said(text: &str) -> String { text.strip_prefix(WORDS).unwrap_or(text).lines().next().unwrap_or("").trim().to_string() }
+/// A message of the board's, as its chat shows it: under whose name (`Autopilot`, `Board`), and what of it (why it
+/// woke; the first line of a task that ended). None: the human's words.
+pub fn shown_as(text: &str) -> Option<(&'static str, String)> {
+    if crate::autopilot::wake::is_wake(text) { return Some(("Autopilot", crate::autopilot::wake::said(text))); }
+    text.strip_prefix(WORDS).map(|t| ("Board", t.lines().next().unwrap_or("").trim().to_string()))
+}
+/// Words from anyone but the board that would pass for its message: marked as none.
+pub fn escape(text: &str) -> String {
+    let t = crate::autopilot::wake::escape(text);
+    if t.trim_start().starts_with(WORDS) { format!("(not the board's) {}", t.trim_start()) } else { t }
+}
 /// How its run ended, in words: a run whose end was told once is not told again when only the stage moves on (approved
 /// and merged), but a new run is. None while it has not ended.
 fn end_of(t: &Obj) -> Option<(&'static str, &'static str)> {
@@ -32,7 +40,7 @@ fn end_of(t: &Obj) -> Option<(&'static str, &'static str)> {
 fn due(t: &Obj) -> Option<(String, &'static str)> {
     if !t.b("news") || t.b("archivedAt") || t.b("attemptOf") { return None; }
     let (kind, words) = end_of(t)?;
-    let mark = format!("{kind}:{}", t.i("armedAt"));
+    let mark = format!("{kind}:{}:{}", t.i("armedAt"), t.i("failedAt")); // a retry that fails again is a new failure
     (t.s("told") != mark).then_some((mark, words))
 }
 /// The coordinator it goes to: the one that added the task, the Coordinator for one you added.

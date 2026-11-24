@@ -2,7 +2,7 @@
 //! follows up on (`followUp`), its id, title, closing note and last review's findings, and the pull request and merge
 //! commit where its work merged (its branch where it did not), or the report where it was research. What it waited for
 //! is taken when the wait ends and kept on the task (`afterDone`), so a clean-up of the task before it loses nothing of
-//! it. A coordinator hears of a task that ended in the same words (coordinator/news.rs).
+//! it. A coordinator hears of a task that ended in the same words (coordinator/ended.rs).
 use super::{after_of, say, stand_of, Stand};
 use crate::clock::now;
 use crate::flow::task::note_stat;
@@ -19,16 +19,20 @@ fn note_of(d: &Task) -> String {
     if let Ok(n) = std::fs::read_to_string(dir_of(d.s("id")).join("closing.md")) { if !n.trim().is_empty() { return n.trim().to_string(); } }
     [d.t("summary"), d.t("said")].into_iter().map(|s| s.trim().to_string()).find(|s| !s.is_empty()).unwrap_or_default()
 }
+/// At most NOTE_MAX characters, and a longer text says where it was cut and where the rest is.
+fn cut(text: &str, id: &str) -> String {
+    match text.char_indices().nth(NOTE_MAX) { Some((i, _)) => format!("{}\n[Cut here: board details {id} has the rest.]", &text[..i]), None => text.to_string() }
+}
 /// One task waited for, as it is now.
 pub fn of(id: &str) -> Value {
     if super::far::is_far(id) { return super::far::handed(id); } // a task of another machine: what it said last
     let Some(d) = get(id) else { return json!({ "id": id, "gone": true }) };
     let mut o = obj(json!({ "id": id, "title": d.at("title"), "repo": d.at("repo"), "done": stand_of(id) == Stand::Done, "stage": d.at("stage"), "research": is_research(&d) }));
-    let note: String = note_of(&d).chars().take(NOTE_MAX).collect();
+    let note = cut(&note_of(&d), id);
     if !note.is_empty() { o.put("note", note); }
     if d.b("pr") { o.put("pr", d.at("pr").clone()); }
     if d.b("branch") { o.put("branch", d.at("branch").clone()); }
-    if let Some(rv) = crate::store::reviews::current_review(&d) { let f: String = crate::gate::findings_text(rv, true).chars().take(NOTE_MAX).collect(); if !f.trim().is_empty() { o.put("review", f); } }
+    if let Some(rv) = crate::store::reviews::current_review(&d) { let f = cut(&crate::gate::findings_text(rv, true), id); if !f.trim().is_empty() { o.put("review", f); } }
     if d.b("prMerged") || d.s("prState") == "merged" || d.b("mergeCommit") { o.put("merged", true); }
     if d.b("mergeCommit") { o.put("commit", d.at("mergeCommit").clone()); }
     if d.at("report").b("link") { o.put("report", d.at("report").at("link").clone()); }
