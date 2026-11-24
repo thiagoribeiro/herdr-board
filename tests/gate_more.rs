@@ -1,5 +1,5 @@
 //! The gate, more: a later round's verdict read against the earlier findings and what the reviewer is told, the
-//! review.mustFix and review.rounds settings, and the review page and the pull request showing every finding.
+//! review.mustFix and review.rounds settings, and the review page and (review.prComments) the pull request showing every finding.
 use crate::common;
 use common::*;
 use serde_json::{json, Value};
@@ -104,15 +104,29 @@ fn review_must_fix_is_major_by_default_yours_or_one_tasks_and_review_rounds_0_se
     assert_eq!(task(&other).at("settings").s("review.mustFix"), "critical");
 }
 
-#[test]
-fn the_pull_request_and_the_review_page_show_every_finding_those_below_the_gate_marked_not_required() {
+/// One round of review on work with a pull request, `review.prComments` set as said: what was asked of gh.
+fn reviewed_with_a_pull_request(comments: bool) -> (World, String, String) {
     let w = world_with(Opts { repo: true, origin: true, ..Default::default() });
+    if comments { set_value("review.prComments", &json!(true), &Scope::you()).unwrap(); }
     w.script(json!({ "worker": [{ "files": { "f.txt": "1\n" }, "commit": "v1", "note": "Did v1." }], "reviewer": [{ "verdict": { "meets": true, "text": "Looked at it.", "findings": [finding("minor", "The name could be clearer", json!({}))] } }] }));
     let id = w.add("With a pull request");
     delegate(&id);
     let t = settle(&id);
     assert_eq!(t.s("stage"), "approval", "{}", t.at("failure"));
+    assert_eq!(t.at("review").arr("findings").len(), 1, "the review is the board's either way");
     let log = gh_log(&w);
+    (w, id, log)
+}
+
+#[test]
+fn by_default_the_review_stays_off_the_pull_request() {
+    let (_w, _, log) = reviewed_with_a_pull_request(false);
+    assert!(log.contains("pr create") && !log.contains("pr comment"), "{log}");
+}
+
+#[test]
+fn the_pull_request_and_the_review_page_show_every_finding_those_below_the_gate_marked_not_required() {
+    let (w, id, log) = reviewed_with_a_pull_request(true);
     assert!(re(r"pr comment 7 --body \*\*Review 1 · Pass · 1 minor\*\*[\s\S]*\*\*Not required \(below the gate\)\*\*\n- \*\*minor\*\*: The name could be clearer \(`f\.txt`\)", &log), "{log}");
     let mut rv = review_of(false, vec![finding("major", "Crashes on <empty> files", json!({})), finding("minor", "A name is unclear", json!({})), finding("major", "The old importer drops rows", json!({ "preexisting": true }))], "major");
     for f in rv.get_mut("findings").unwrap().as_array_mut().unwrap() { if f.b("preexisting") { f["task"] = json!("proj/9"); } }
