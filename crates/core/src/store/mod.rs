@@ -25,6 +25,7 @@ pub mod pins;
 pub mod repos;
 pub mod retries;
 pub mod reviews;
+pub mod route;
 pub mod runs;
 pub mod said_by;
 pub mod settings;

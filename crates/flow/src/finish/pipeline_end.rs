@@ -117,6 +117,12 @@ pub fn after_review(c: Ctx, g: &mut Guard) -> Res<()> {
         stop_at(id, "tokens", limit, *used, StopHow { role: "reviewer".into(), ready: true, done: one_line(&format!("{} {}{}", gate::sentence(rv, "accept"), finished(c.text), c.note), 2048), ..Default::default() });
         return Ok(());
     }
+    // A routed task escalates earlier: the next entry of its chain takes over after `route.escalateAfter` failed reviews.
+    if let Some(rv) = &review { if fresh && !passed && max > 0 && !t.b("mergeIntent") && crate::store::route::escalates_early(&t, rounds) {
+        let mut stale = rv.as_object().cloned().unwrap_or_default(); stale.put("stale", true);
+        g.set(|t| t.put("review", stale.clone()))?;
+        if hand_over(id, g, &format!("its work failed review ({} round{} on {}, route.escalateAfter)", rounds + 1, if rounds == 0 { "" } else { "s" }, t.at("route").s("entry")), "")? { return Ok(()); }
+    } }
     if let Some(rv) = &review { if fresh && !passed && rounds < max {
         let mut stale = rv.as_object().cloned().unwrap_or_default(); stale.put("stale", true);
         flow::send::send_own(id, &gate::review_message(rv, false), "review", t.b("mergeIntent"), obj(json!({ "review": stale, "reviewRounds": rounds + 1 })), 0)?;

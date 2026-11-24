@@ -13,6 +13,7 @@ const NAMES: [&str; 2] = ["limit.time", "limit.tokens"];
 fn task_of(t: &Task) -> Option<Task> { if t.b("attemptOf") { get(t.s("attemptOf")) } else { None } }
 /// Does any place say a limit for this task? Asked before the settings are looked up at all, on every drawing.
 pub fn limit_said(t: &Task) -> bool {
+    if t.b("route") { return true; } // a routed task's tokens are counted, for `models stats`
     if t.at("runLimit").is_object() && t.at("runLimit").s("time") != "none" { return true; }
     let mine = yours();
     let repo = if t.s("repo").is_empty() { t.s("id").split('/').next().unwrap_or("").to_string() } else { t.s("repo").to_string() };

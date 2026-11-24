@@ -2,9 +2,13 @@
 //! there with the names it does take, not found out when the agent fails to start (docs/models.md). The names are the
 //! program's own list where it has one (kinds.rs `models`; Codex's for the account it is signed in with), else its
 //! short and full names written in the table.
+pub mod allow;
+pub mod catalog;
+pub mod catalog_say;
 pub mod listed;
 pub mod say;
 pub mod server;
+pub mod stats;
 
 use super::kinds::{kind, Kind};
 use crate::store::settings::values::distance;

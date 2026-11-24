@@ -19,6 +19,16 @@ fn cli(words: &[&str]) -> sw::err::Res<(Value, String)> {
 }
 
 #[test]
+fn summary_helper_respects_the_allowed_programs_without_consuming_a_retry() {
+    let w = world();
+    let id = delivery(&w);
+    std::fs::write(sw::agents::models::catalog::path(), "[allow]\nagents = [\"codex\"]\n").unwrap();
+    sw::digest::run::tick_with(&rows(&id), &|_, _, _| panic!("disallowed helper started"));
+    assert!(task(&id).at("digestAttempt").is_null());
+    assert!(sw::digest::cached(&task(&id)).is_null());
+}
+
+#[test]
 fn unchanged_delivery_is_reused_but_new_evidence_invalidates_the_cache() {
     let w = world_with(Opts { settings: json!({ "summary.agent": "claude/haiku" }), ..Default::default() });
     let id = delivery(&w);

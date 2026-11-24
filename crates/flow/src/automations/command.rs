@@ -32,10 +32,12 @@ pub const HOW: &str = "automations takes:
   automations firings <name>                    every firing: when, what fired it, the task it made or why it was skipped
   automations remove <name>
   set <setting> <value> --automation <name> · unset <setting> --automation <name> · show --automation <name>";
-/// Its work settings from a command's options: every --<name with a dot>, and --chat, short for chat.only.
+/// Its work settings from a command's options: every --<name with a dot>, --chat, short for chat.only, and --route,
+/// short for route.default: the catalog's entry its tasks work on (store/route.rs).
 fn settings_of(flags: &Obj) -> Obj {
     let mut s: Obj = flags.iter().filter(|(k, _)| k.contains('.')).map(|(k, v)| (k.clone(), v.clone())).collect();
     if let Some(c) = chat(flags) { s.put(crate::chat_only::CHAT, c); }
+    if let Some(r) = flags.get("route").filter(|r| r.is_string()) { s.put("route.default", r.clone()); }
     s
 }
 fn show_text(a: &Obj) -> String {

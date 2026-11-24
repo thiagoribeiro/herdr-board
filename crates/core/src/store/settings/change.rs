@@ -44,7 +44,7 @@ fn now_value(name: &str, scope: &Scope) -> String { lookup(name, scope, &yours()
 /// named in the same request, else the one the scope has.
 pub fn checked(pairs: &[(String, Value)], scope: &Scope) -> Res<Obj> {
     let mut out = Obj::new();
-    for (name, value) in pairs { allowed(name, scope)?; let v = check(name, value, "")?; models_fit(name, &v)?; out.insert(name.clone(), v); }
+    for (name, value) in pairs { allowed(name, scope)?; let v = check(name, value, "")?; models_fit(name, &v)?; crate::store::route::default_fits(name, &v)?; out.insert(name.clone(), v); }
     // Every repo has a key: none is refused, with the way back to the one made from its name.
     if out.get("repo.key").map(text).as_deref() == Some(NONE) {
         return refuse(format!("repo.key cannot be none: every repo has a short key. To go back to the one the board made from its name: herdr-board unset repo.key --repo {}", scope.repo));
