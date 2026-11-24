@@ -44,6 +44,7 @@ pub fn rules_of(co: &Co, cmd: &str) -> String {
     let (intro, _, folder) = super::rules_place::place_rules(co, &user_home().display().to_string());
     let notes = super::rules_notes::notes_rules(co);
     let memory = super::rules_notes::memory_line(co);
+    let model_rule = super::rules_route::model_rule(co);
     let me = match &co.level { Level::Top => String::new(), Level::Machine => " --machine".into(), Level::Project(r) => format!(" --project {r}") };
     let body = format!("{intro} You are an ordinary agent in a long-lived chat. Answer questions and make decisions; delegate requested implementation work to tasks. Answer briefly, lead with the result and name full task ids.\n\
 The board's command is: {cmd} (called board below; use the full path). {folder}\n\
@@ -58,7 +59,7 @@ Keep main context focused on decisions, constraints and open questions; raw logs
 For durable memory: board coordinator memory '<JSON with decisions, constraints, questions as string arrays>'. Persist only durable decisions, never secrets, raw logs or mutable task status. When checkpointSuggested is true, finish the current request and save all unresolved context, then run board coordinator checkpoint last at a natural boundary; it starts a fresh conversation on the same model/effort and keeps history and pending requests. State the result before replacing the conversation. Never checkpoint with unresolved context absent from memory.\n\
 For uncommon features, read board coordinator help <topic> before acting: plan, automations, attempts, fallback, limits, research, chat, settings, models, merge, archive, dependencies. Full reference includes --merge.closes 2203,2204 and board archive --done [--repo <repo>]. board coordinator restart{me} preserves this conversation; board coordinator new{me} starts a new one.\n{memory}\n{notes}");
     let pilot = if crate::autopilot::record::is_on(co) { super::rules_autopilot::autopilot_rules(co) } else { "Autopilot is off: no unasked work. Turn it on only when requested, with a goal and explicit permissions (board coordinator help).".into() };
-    format!("{body}\n{pilot}{}", if words.is_empty() || words == "none" { String::new() } else { format!("\n{}", own_words(&words)) })
+    format!("{body}\n{model_rule}\n{pilot}{}", if words.is_empty() || words == "none" { String::new() } else { format!("\n{}", own_words(&words)) })
 }
 /// The rules of any coordinator: the same board, its own place in it (who it is, where it runs, which repo it adds to).
 pub fn reference_of(co: &Co, cmd: &str) -> String {

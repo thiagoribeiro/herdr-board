@@ -38,6 +38,7 @@ pub fn tick_with(tasks: &[Obj], run: Run) {
     let agent = setting_text("summary.agent", None);
     if agent == "none" { return; }
     let who = agent_of(&agent);
+    if crate::agents::models::allow::start_refusal(&who.kind).is_some() { return; }
     if !["claude", "pi"].contains(&who.kind.as_str()) { return; }
     let now = crate::clock::now();
     for seen in tasks {
