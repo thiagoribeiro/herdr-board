@@ -15,6 +15,7 @@ use sw::store::tasks::{update, Change};
 fn t(id: &str, coordinator: &str, after: &[&str]) -> (Obj, String) {
     (obj(json!({ "id": id, "coordinator": coordinator, "after": after })), format!("w-{id}"))
 }
+fn tree_of(list: &[(Obj, String)]) -> Vec<Place> { tree(&list.iter().map(|(t, s)| (t, s.as_str())).collect::<Vec<_>>()) }
 fn prefixes(places: &[Place]) -> Vec<(String, String)> { places.iter().map(|p| (p.prefix.clone(), p.id.clone())).collect() }
 fn pairs(list: &[(&str, &str)]) -> Vec<(String, String)> { list.iter().map(|(a, b)| (a.to_string(), b.to_string())).collect() }
 
@@ -33,7 +34,7 @@ fn the_tree_puts_each_coordinators_tasks_under_it_a_waiting_task_under_the_one_i
         t("p/9", "machine", &["p/2"]),
         t("p/10", "main", &["p/2"]),
     ];
-    let places = tree(&tasks);
+    let places = tree_of(&tasks);
     assert_eq!(prefixes(&places), pairs(&[
         ("├─ ", "p/2"),
         ("│  ├─ ", "p/3"),
@@ -48,13 +49,25 @@ fn the_tree_puts_each_coordinators_tasks_under_it_a_waiting_task_under_the_one_i
     ]));
     assert_eq!(places.iter().map(|p| p.group.as_str()).collect::<Vec<_>>(), ["main", "main", "main", "main", "main", "machine", "machine", "project:p", "", ""]);
     // A wait in a circle draws no loop: each task once.
-    let circle = tree(&[t("p/1", "main", &["p/2"]), t("p/2", "main", &["p/1"])]);
+    let circle = tree_of(&[t("p/1", "main", &["p/2"]), t("p/2", "main", &["p/1"])]);
     assert_eq!(circle.len(), 2, "{circle:?}");
 }
 
 #[test]
+fn a_chain_deeper_than_four_levels_stands_at_the_fourth_so_the_number_stays_inside_herdrs_26_cells() {
+    let ids: Vec<String> = (1..=7).map(|n| format!("p/{n}")).collect();
+    let list: Vec<(Obj, String)> = ids.iter().enumerate().map(|(i, id)| { let after: Vec<&str> = if i == 0 { vec![] } else { vec![ids[i - 1].as_str()] }; t(id, "main", &after) }).collect();
+    let got: Vec<String> = tree_of(&list).into_iter().map(|p| p.prefix).collect();
+    assert_eq!(got, ["└─ ", "   └─ ", "      └─ ", "         └─ ", "         └─ ", "         └─ ", "         └─ "]);
+    assert!(got.iter().all(|p| p.chars().count() <= 3 * sw::flow::sidebar_tree::DEEPEST));
+    // Yours: the top has no prefix, so its kids start one level in.
+    let mine: Vec<(Obj, String)> = ids.iter().enumerate().map(|(i, id)| { let after: Vec<&str> = if i == 0 { vec![] } else { vec![ids[i - 1].as_str()] }; t(id, "", &after) }).collect();
+    assert_eq!(tree_of(&mine).into_iter().map(|p| p.prefix).collect::<Vec<_>>(), ["", "└─ ", "   └─ ", "      └─ ", "         └─ ", "         └─ ", "         └─ "]);
+}
+
+#[test]
 fn the_spaces_go_right_after_their_coordinators_space_every_other_space_keeps_its_place_and_the_rest_go_last() {
-    let places = tree(&[t("p/1", "", &[]), t("p/2", "main", &[]), t("p/3", "project:p", &[]), t("p/4", "main", &["p/2"]), t("p/5", "project:q", &[])]);
+    let places = tree_of(&[t("p/1", "", &[]), t("p/2", "main", &[]), t("p/3", "project:p", &[]), t("p/4", "main", &["p/2"]), t("p/5", "project:q", &[])]);
     let have: Vec<String> = ["w-p/1", "home", "w-p/4", "mine", "repo-p", "w-p/3", "w-p/2", "w-p/5"].map(String::from).to_vec();
     let anchors = vec![("main".to_string(), "home".to_string()), ("project:p".to_string(), "repo-p".to_string())];
     // project:q has no coordinator in herdr now: its task goes last with yours, before them.
@@ -139,4 +152,28 @@ fn herdrs_sidebar_shows_the_coordinator_then_its_tasks_then_the_tasks_that_wait_
     let both: Vec<String> = w.state().arr("workspaces").iter().filter(|x| [space(a), space(b)].contains(&x.t("workspace_id"))).map(|x| x.t("label")).collect();
     assert!(both.len() == 2 && both[0].starts_with("├─ PRJ-") && both[1].starts_with("└─ PRJ-"), "{both:?}");
     assert_eq!(w.state().arr("moves").len(), moves + 1);
+}
+
+#[test]
+fn in_herdrs_priority_sort_no_tree_is_drawn_and_no_space_is_moved_and_it_comes_back_with_the_sort_by_space() {
+    let w = world();
+    let step = json!({ "files": { "hello.txt": "hello\n" }, "note": "Added the greeting." });
+    w.script(json!({ "worker": [step, step] }));
+    let ids: Vec<String> = ["Plan the trip", "Book the train"].iter().map(|n| w.add(n)).collect();
+    for id in &ids { delegate(id); settle(id); }
+    for id in &ids { update(id, |t| { t.put("coordinator", "main"); Ok(Change::Write) }).unwrap(); }
+    let conf = sw::extras::herdr_config();
+    std::fs::create_dir_all(conf.parent().unwrap()).unwrap();
+    std::fs::write(&conf, "[ui]\nagent_panel_sort = \"priority\"\n").unwrap();
+    sync();
+    let key = |id: &str| sw::flow::sidebar::space_label(&task(id));
+    for id in &ids { assert_eq!(label(&w, &space(id)), key(id), "no prefix in the priority sort"); }
+    tell_sidebar(&task(&ids[0]));
+    assert_eq!(label(&w, &space(&ids[0])), key(&ids[0]));
+    assert_eq!(w.state().arr("moves").len(), 0, "nothing moved");
+    // Back to herdr's default: within 10 seconds the tree is there again.
+    std::fs::write(&conf, "[ui]\nagent_panel_sort = \"spaces\"\n").unwrap();
+    sw::clock::advance(11_000);
+    sync();
+    for id in &ids { assert!(label(&w, &space(id)).ends_with(&key(id)) && label(&w, &space(id)) != key(id), "{}", label(&w, &space(id))); }
 }

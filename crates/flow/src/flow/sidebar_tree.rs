@@ -1,17 +1,21 @@
 //! The tree of herdr's sidebar: each task's space under the coordinator that added it, and a task that waits for
 //! another (`--after`) under that one. herdr 0.9.5 nests nothing, so the tree is two things: a prefix before the task's
-//! number in its space's name (`├─ `, `└─ `, `│  `, three cells a level), and the order of the spaces, each
-//! coordinator's tasks right after the space its tab is in (herdr's agents list, grouped by space, follows that order).
-//! Tasks you added yourself (or an automation did) stand outside every tree, last: no prefix, except under a task they
-//! wait for. The order is put once per change of the tree, not each tick, so a space you drag stays where you put it.
+//! number in its space's name (`├─ `, `└─ `, `│  `, three cells a level, four levels at most), and the order of the
+//! spaces, each coordinator's tasks right after the space its tab is in (herdr's agents list, grouped by space, follows
+//! that order). Tasks you added yourself (or an automation did) stand outside every tree, last: no prefix, except under
+//! a task they wait for. Only while herdr groups its agents by space: in its `priority` sort no tree is drawn.
+use super::sidebar_entry::cut;
 use crate::coordinator::co::Co;
 use crate::json::*;
-use super::sidebar_entry::CAP;
+use std::collections::HashMap;
 
 pub const BRANCH: &str = "├─ ";
 pub const LAST: &str = "└─ ";
 pub const GOES_ON: &str = "│  ";
 pub const ENDED: &str = "   ";
+/// Levels drawn at most: a task deeper than that stands at the last of them, so that the number stays inside herdr's
+/// 26 cells (12 cells of tree, the dot and a number like `BRD-123`).
+pub const DEEPEST: usize = 4;
 /// The group of tasks you added: no coordinator.
 pub const YOURS: &str = "";
 
@@ -21,44 +25,59 @@ pub const YOURS: &str = "";
 pub struct Place { pub id: String, pub space: String, pub group: String, pub prefix: String }
 
 /// The coordinator that added a task, by its key: the one you asked, or whose autopilot did. None: you, or an automation.
-pub fn group_of(t: &Obj) -> String { t.t("coordinator") }
+pub fn group_of(t: &Obj) -> &str { t.s("coordinator") }
 /// Groups in their order: the Coordinator's, the machine's, the projects' by name, yours last.
-fn rank(g: &str) -> (u8, String) { match g { "main" => (0, String::new()), "machine" => (1, String::new()), YOURS => (3, String::new()), p => (2, p.to_string()) } }
+fn rank(g: &str) -> (u8, &str) { match g { "main" => (0, ""), "machine" => (1, ""), YOURS => (3, ""), p => (2, p) } }
 
 /// `tasks`: (task, its space) for each task with a space in the sidebar, in the board's order. Out: the same tasks in
 /// the sidebar's order, each with its prefix.
-pub fn tree(tasks: &[(Obj, String)]) -> Vec<Place> {
-    let mut groups: Vec<String> = tasks.iter().map(|(t, _)| group_of(t)).collect();
+pub fn tree(tasks: &[(&Obj, &str)]) -> Vec<Place> {
+    let mut groups: Vec<&str> = tasks.iter().map(|(t, _)| group_of(t)).collect();
     groups.sort_by_key(|g| rank(g));
     groups.dedup();
-    let mut out = vec![];
+    let mut out = Vec::with_capacity(tasks.len());
     for g in groups {
-        let mine: Vec<&(Obj, String)> = tasks.iter().filter(|(t, _)| group_of(t) == g).collect();
-        let ids: Vec<String> = mine.iter().map(|(t, _)| t.t("id")).collect();
-        // Under the first task it waits for that is in the same tree, else at the top of it.
-        let parent = |t: &Obj| crate::after::after_of(t).into_iter().find(|a| *a != t.s("id") && ids.contains(a)).unwrap_or_default();
-        let kids = |of: &str| mine.iter().filter(|(t, _)| parent(t) == of).map(|x| (*x).clone()).collect::<Vec<_>>();
-        let top = kids("");
+        let mine: Vec<(&Obj, &str)> = tasks.iter().filter(|(t, _)| group_of(t) == g).copied().collect();
+        // Under the first task it waits for that is in the same tree, else at the top of it: each task's parent, once.
+        let parent: Vec<Option<usize>> = mine.iter().map(|(t, _)| crate::after::after_of(t).iter().filter(|a| a.as_str() != t.s("id")).find_map(|a| mine.iter().position(|(o, _)| o.s("id") == a.as_str()))).collect();
+        let mut kids: HashMap<Option<usize>, Vec<usize>> = HashMap::new();
+        for (i, p) in parent.iter().enumerate() { kids.entry(*p).or_default().push(i); }
+        let w = Walk { mine: &mine, kids: &kids, group: g, drawn: g != YOURS };
+        let mut seen = vec![false; mine.len()];
+        let top = kids.get(&None).cloned().unwrap_or_default();
+        w.walk(&top, "", 0, &mut seen, &mut out);
         // Waits in a circle (refused on `after`, but a task's list can be edited): what was never reached goes at the top.
-        let mut seen: Vec<String> = vec![];
-        let under_coordinator = g != YOURS;
-        walk(&top, "", under_coordinator, &g, &kids, &mut seen, &mut out);
-        let rest: Vec<(Obj, String)> = mine.iter().filter(|(t, _)| !seen.contains(&t.t("id"))).map(|x| (*x).clone()).collect();
-        walk(&rest, "", under_coordinator, &g, &|_: &str| vec![], &mut seen, &mut out);
+        let rest: Vec<usize> = (0..mine.len()).filter(|i| !seen[*i]).collect();
+        Walk { kids: &HashMap::new(), ..w }.walk(&rest, "", 0, &mut seen, &mut out);
     }
     out
 }
-fn walk(list: &[(Obj, String)], lead: &str, drawn: bool, g: &str, kids: &dyn Fn(&str) -> Vec<(Obj, String)>, seen: &mut Vec<String>, out: &mut Vec<Place>) {
-    for (i, (t, space)) in list.iter().enumerate() {
-        let id = t.t("id");
-        if seen.contains(&id) { continue; }
-        seen.push(id.clone());
-        let last = i + 1 == list.len();
-        let prefix = if drawn { format!("{lead}{}", if last { LAST } else { BRANCH }) } else { String::new() };
-        out.push(Place { id: id.clone(), space: space.clone(), group: g.to_string(), prefix });
-        let next = if drawn { format!("{lead}{}", if last { ENDED } else { GOES_ON }) } else { String::new() };
-        walk(&kids(&id), &next, true, g, kids, seen, out);
+struct Walk<'a> { mine: &'a [(&'a Obj, &'a str)], kids: &'a HashMap<Option<usize>, Vec<usize>>, group: &'a str, drawn: bool }
+impl Walk<'_> {
+    fn walk(&self, list: &[usize], lead: &str, depth: usize, seen: &mut [bool], out: &mut Vec<Place>) {
+        let list: Vec<usize> = list.iter().copied().filter(|i| !seen[*i]).collect();
+        for (n, &i) in list.iter().enumerate() {
+            if seen[i] { continue; }
+            seen[i] = true;
+            let last = n + 1 == list.len();
+            // Your own tasks' tops are not drawn; their kids are, one level each.
+            let drawn = self.drawn || depth > 0;
+            let prefix = if drawn { format!("{lead}{}", if last { LAST } else { BRANCH }) } else { String::new() };
+            let (t, space) = self.mine[i];
+            out.push(Place { id: t.t("id"), space: space.to_string(), group: self.group.to_string(), prefix });
+            // Past the deepest level a task's kids stand at its own level.
+            let next = if !drawn { String::new() } else if lead.chars().count() / 3 + 1 >= DEEPEST { lead.to_string() } else { format!("{lead}{}", if last { ENDED } else { GOES_ON }) };
+            if let Some(k) = self.kids.get(&Some(i)) { self.walk(k, &next, depth + 1, seen, out); }
+        }
     }
+}
+
+/// Does herdr list its agents space by space (`[ui] agent_panel_sort`: "spaces", its default, or "workspaces")? In
+/// its "priority" sort the order of the spaces is not the list's, and a tree would stand in pieces.
+pub fn grouped() -> bool {
+    let conf = crate::board::theme::read_config();
+    let sort = conf.get("ui").and_then(|u| u.as_table()).and_then(|u| u.get("agent_panel_sort")).and_then(|s| s.as_str()).unwrap_or("spaces");
+    sort != "priority"
 }
 
 /// The space each live coordinator's tab is in, by its key: where its tasks go after.
@@ -81,7 +100,4 @@ pub fn order(have: &[String], places: &[Place], anchors: &[(String, String)]) ->
     out
 }
 /// A space's name: its prefix, then the task's number and title, cut (with `…`) where herdr would cut it.
-pub fn labelled(prefix: &str, name: &str) -> String {
-    let all: Vec<char> = format!("{prefix}{name}").chars().collect();
-    if all.len() <= CAP { all.into_iter().collect() } else { format!("{}…", all[..CAP - 1].iter().collect::<String>().trim_end()) }
-}
+pub fn labelled(prefix: &str, name: &str) -> String { cut(&format!("{prefix}{name}")) }

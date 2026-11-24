@@ -8,7 +8,7 @@
 //! that is no longer the task's (herdr hands their ids out again), nor ever into a coordinator's.
 use super::live::{owns_pane, saved};
 use super::sidebar_entry::{entry_of, reviewer_entry, task_name, Entry};
-use super::sidebar_tree::{anchors, labelled, order, tree, Place};
+use super::sidebar_tree::{anchors, grouped, labelled, order, tree, Place};
 use super::task::is_agent_task;
 use crate::herdr::cli::{args, current_socket, same_socket, session_name};
 use crate::herdr::Herdr;
@@ -105,7 +105,7 @@ pub fn sync_sidebar(tasks: &[Obj], socket: Option<&str>, now: i64) {
     let socket = socket.map(String::from).or_else(|| tasks.iter().find(|t| t.at("live").is_object() && !t.at("live").b("away")).map(|t| t.at("link").t("socket"))).filter(|s| !s.is_empty()).unwrap_or_else(current_socket);
     let mut seen = read();
     let mut list: Vec<Write> = vec![];
-    let mut shown: Vec<Obj> = vec![];
+    let mut shown: Vec<&Obj> = vec![];
     let (mut down, mut lost) = (false, false);
     let mut gone: Vec<String> = vec![];
     // A task's attempts have panes of their own: each has an entry like a task's. A task that waits for your pick has
@@ -127,18 +127,22 @@ pub fn sync_sidebar(tasks: &[Obj], socket: Option<&str>, now: i64) {
         if live.b("gone") { gone.extend([t.at("link").t("pane"), t.at("link").t("workspace")]); }
         if !told(t) || !live.is_object() || live.b("gone") || live.b("down") || live.b("away") { continue; }
         if forgotten(seen.get(&format!("e|{socket}|{}", t.at("link").s("pane"))), live.at("pane")) { lost = true; }
-        shown.push(t.clone());
+        shown.push(t);
     }
     let theirs = coordinators(&socket);
-    let places = tree(&shown.iter().map(|t| (t.clone(), own_space(t))).filter(|(_, s)| !s.is_empty() && !theirs.contains(s)).collect::<Vec<_>>());
-    let prefix_of = |id: &str| places.iter().find(|p| p.id == id).map(|p| p.prefix.clone()).unwrap_or_default();
-    for t in &shown { list.extend(wanted(t, now, &prefix_of(t.s("id")))); }
+    let spaces: Vec<String> = shown.iter().map(|t| own_space(t)).collect();
+    let mut places = tree(&shown.iter().zip(&spaces).filter(|(_, s)| !s.is_empty() && !theirs.contains(*s)).map(|(t, s)| (*t, s.as_str())).collect::<Vec<_>>());
+    // herdr's priority sort lists its agents in an order of its own: a tree there would stand in pieces.
+    let by_space = sorted_by_space(&socket, &seen);
+    if !by_space { for p in &mut places { p.prefix.clear(); } }
+    let prefix_of: std::collections::HashMap<&str, &str> = places.iter().map(|p| (p.id.as_str(), p.prefix.as_str())).collect();
+    for t in &shown { list.extend(wanted(t, now, prefix_of.get(t.s("id")).copied().unwrap_or(""))); }
     // herdr restarted: it kept none of what was written, so all of it is written again.
     if lost && due(&format!("sidebar-again-{}", session_name(&socket)), 10000) { seen.retain(|k, _| k.split('|').nth(1) != Some(socket.as_str())); }
     let mut theirs = theirs;
     list.retain(|(k, _, _)| !theirs.contains(target(k)));
     let mut changed = write(&list, &mut seen) || lost;
-    if !down { changed |= put_in_order(&socket, &places, &mut seen); }
+    if !down { changed |= put_in_order(&socket, &places, by_space, &mut seen); }
     theirs.extend(gone);
     if !down {
         let keep: std::collections::HashSet<String> = list.iter().map(|(k, _, _)| k.clone()).collect();
@@ -157,20 +161,33 @@ pub fn sync_sidebar(tasks: &[Obj], socket: Option<&str>, now: i64) {
     }
     if changed { let _ = write_json(&sidebar_file(), &Value::Object(seen)); }
 }
+/// Does herdr list its agents by space (sidebar_tree.rs `grouped`)? Its config is read again every 10 seconds, and
+/// what it said is kept with the tree in between.
+fn sorted_by_space(socket: &str, seen: &Obj) -> bool {
+    let kept = seen.at(&format!("o|{socket}")).at("bySpace").as_bool();
+    match kept { Some(g) if !due(&format!("sidebar-sort-{}", session_name(socket)), 10000) => g, _ => grouped() }
+}
 /// The spaces in the tree's order, once each time the tree changes: one move of them all (`workspace.move_block`,
-/// herdr 0.9.5). What was put is remembered with each task's prefix, which `tell_sidebar` writes again.
-fn put_in_order(socket: &str, places: &[Place], seen: &mut Obj) -> bool {
+/// herdr 0.9.5), and none while herdr sorts its agents by priority. The coordinators' spaces are looked at again when
+/// the tree changed, else every 10 seconds. What was put is remembered with each task's prefix, which `tell_sidebar`
+/// writes again; a move herdr refused is not tried again before the tree changes.
+fn put_in_order(socket: &str, places: &[Place], by_space: bool, seen: &mut Obj) -> bool {
     let key = format!("o|{socket}");
+    let tree = json!(places.iter().map(|p| [p.space.as_str(), p.group.as_str(), p.prefix.as_str()]).collect::<Vec<_>>());
+    let was = seen.at(&key).at("sig").clone();
+    if was.at("tree") == &tree && was.at("bySpace").as_bool() == Some(by_space) && !due(&format!("sidebar-anchors-{}", session_name(socket)), 10000) { return false; }
     let marks = anchors(socket);
-    let sig = json!({ "tree": places.iter().map(|p| [p.space.as_str(), p.group.as_str(), p.prefix.as_str()]).collect::<Vec<_>>(), "anchors": marks });
-    if seen.at(&key).at("sig") == &sig { return false; }
-    let api = Herdr::new(Some(socket.to_string()));
-    let Ok(list) = api.workspaces() else { return false };
-    let have: Vec<String> = list.iter().map(|w| w.t("workspace_id")).collect();
-    let want = order(&have, places, &marks);
-    if want != have && want.len() == have.len() && crate::herdr::socket::ask("workspace.move_block", &json!({ "workspace_ids": want }), Some(socket)).is_err() { return false; }
+    let sig = json!({ "tree": tree, "bySpace": by_space, "anchors": marks });
+    if was == sig { return false; }
+    if by_space {
+        let api = Herdr::new(Some(socket.to_string()));
+        let Ok(list) = api.workspaces() else { return false };
+        let have: Vec<String> = list.iter().map(|w| w.t("workspace_id")).collect();
+        let want = order(&have, places, &marks);
+        if want != have && want.len() == have.len() { let _ = crate::herdr::socket::ask("workspace.move_block", &json!({ "workspace_ids": want }), Some(socket)); }
+    }
     let prefix: Obj = places.iter().filter(|p| !p.prefix.is_empty()).map(|p| (p.id.clone(), json!(p.prefix))).collect();
-    seen.put(&key, json!({ "sig": sig, "prefix": prefix }));
+    seen.put(&key, json!({ "sig": sig, "prefix": prefix, "bySpace": by_space }));
     true
 }
 /// The name a task's space is opened under: what its row starts with.

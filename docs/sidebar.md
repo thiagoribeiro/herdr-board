@@ -111,9 +111,10 @@ The entries stand as a tree, each task under the coordinator that added it, as `
   task it waits for that is in the same tree. A task it waits for that has no space any more (done and closed), or is
   in another tree, puts it at the top of its own. Nothing loops: a wait in a circle draws each task once.
 - **The characters** are `├─ ` for a task with more below it at its level, `└─ ` for the last one, and `│  ` or three
-  spaces for each level above it: three cells a level, before the task's number. Herdr cuts a row at its end, so a
-  narrow sidebar still cuts the title, never the number (a task four levels deep has 12 cells of tree before it). The
-  board's own list draws no tree: these are the sidebar's own.
+  spaces for each level above it: three cells a level, before the task's number. Four levels at most: a task deeper
+  than that stands at the fourth, beside the one it waits for, so that the tree is never more than 12 cells and the
+  number stays inside Herdr's default 26 cells. Herdr cuts a row at its end, so a narrow sidebar cuts the title, never
+  the number. The board's own list draws no tree: these are the sidebar's own.
 
 ### What Herdr lets the board do here (checked on Herdr 0.9.5)
 
@@ -127,11 +128,14 @@ The entries stand as a tree, each task under the coordinator that added it, as `
   socket): each coordinator's tasks right after the space its tab is in, yours at the end; every other space keeps its
   place.
 - **Once per change.** The spaces are put in order when the tree changes (a task added to it, gone, moved under
-  another, a coordinator moved), not on every tick: a space you drag by hand stays where you put it until then.
-- **Not in the `priority` sort.** With `agent_panel_sort = "priority"` (the header says `priority`), Herdr orders the
-  agents list by what needs you most and most recently, whatever the spaces' order. The prefixes are still there, but
-  the entries are no longer under each other; the spaces part keeps the tree. For the tree in the agents list too, set
-  `agent_panel_sort = "spaces"` under `[ui]` in Herdr's config.
+  another, a coordinator moved: where the coordinators are is looked at again every 10 seconds), not on every tick: a
+  space you drag by hand stays where you put it until then. A move Herdr refuses (an older Herdr) is not tried again
+  before the tree changes; the prefixes are written all the same.
+- **No tree in the `priority` sort.** With `agent_panel_sort = "priority"` under `[ui]` in Herdr's config (the list's
+  header says `priority`), Herdr orders the agents list by what needs you most and most recently, whatever the spaces'
+  order: a `└─` there would stand away from its task. So the board reads that setting (again every 10 seconds) and,
+  while it is `priority`, draws no tree: the spaces keep their plain names (`BRD-3 …`) and are not moved. For the tree,
+  set `agent_panel_sort = "spaces"` (or take the line out: it is Herdr's default); it comes within 10 seconds.
 
 ## With and without the plugin's sidebar rows
 
