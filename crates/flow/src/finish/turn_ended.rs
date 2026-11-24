@@ -88,6 +88,14 @@ fn finish_once(id: &str, force: bool) -> bool {
     }
     true
 }
+/// An agent whose program exited in its turn with nothing in its conversation to say why ("API Error: Connection lost
+/// mid-response", then gone): a real error from its screen's last words, retried by itself when those are a passing one.
+fn exited(api: &crate::herdr::Herdr, pane: &str) -> Turn {
+    let words = last_lines(&crate::agents::screen_text::agent_words(&read_screen(api, pane, None, 60)), 4);
+    let pe = crate::agents::provider_error::provider_error(&words, "", 0);
+    let error = if words.trim().is_empty() { "The agent's program exited.".to_string() } else { format!("The agent's program exited. Its last words: {}", words.trim()) };
+    Turn { error, stop: "error".into(), pos: now(), passing: pe.passing, reason: pe.reason, auth: pe.auth, ..Default::default() }
+}
 fn finish_steps(id: &str, g: &mut Guard, mut t: Task, ev: Option<Value>, force: bool) -> Res<()> {
     let api = flow::task::h(&t);
     let k = t.t("agent");
@@ -131,7 +139,8 @@ fn finish_steps(id: &str, g: &mut Guard, mut t: Task, ev: Option<Value>, force: 
         turn = installed::read_turn_of(&k, t.so("transcript").map(Path::new), &session, &cwd_of(&t), false);
         let says = newer(turn.as_ref(), &t) && turn.as_ref().map(|x| x.pos > t.i("armedAt") && ((x.finished && x.id != t.at("handled").s("msg")) || !x.error.is_empty())).unwrap_or(false);
         match &a {
-            None => { if !(says && turn.as_ref().map(|x| !x.error.is_empty()).unwrap_or(false)) { return Ok(()); } } // the agent exited: a crash still shows its real last error
+            // the agent exited: a crash still shows its real last error, else its screen's last words are the error
+            None => { if !says { turn = if fresh_note.is_some() { None } else { Some(exited(&api, &pane)) }; } }
             Some(a) if !says => {
                 if turn.as_ref().map(|x| x.finished && x.id == t.at("handled").s("msg")).unwrap_or(false) && fresh_note.is_none() { let c = comp.clone(); let _ = update_wait(id, 10000, |t| { t.obj_mut("handled").put("comp", c.clone()); Ok(Change::Write) }); return Ok(()); } // a late "idle" for a turn already handled
                 if a.s("agent_status") == "unknown" && fresh_note.is_none() { return Ok(()); } // herdr cannot tell, and nothing says it stopped

@@ -32,14 +32,14 @@ pub fn compare_brief(t: &Task, passed: &[Task], writes: bool) -> String {
         let base = [c.s("syncedTo"), c.s("baseSha"), c.s("from")].into_iter().find(|s| !s.is_empty()).unwrap_or("HEAD").to_string();
         let said: String = crate::text::squash(if c.b("summary") { c.s("summary") } else { c.s("said") }).chars().take(1200).collect();
         [format!("Attempt {}, by {}:", c.s("letter"), agent_word(c)),
-            if research { format!("  its report: {}/", report_folder(c).display()) } else { format!("  worktree {}, branch {}{}", c.s("worktree"), c.s("branch"), if c.b("stat") { format!(" ({})", c.s("stat")) } else { String::new() }) },
+            if research { format!("  its result, its closing note: {}", crate::flow::task::note_file(c).display()) } else { format!("  worktree {}, branch {}{}", c.s("worktree"), c.s("branch"), if c.b("stat") { format!(" ({})", c.s("stat")) } else { String::new() }) },
             if research { String::new() } else { format!("  its change: git -C {} diff {base}...HEAD", c.s("worktree")) },
             format!("  what its agent says it did: {}", if said.is_empty() { "nothing".into() } else { said })].into_iter().filter(|s| !s.is_empty()).collect::<Vec<_>>().join("\n")
     };
     let desc: String = t.s("description").chars().take(3000).collect();
     let letters = passed.iter().map(|c| c.t("letter")).collect::<Vec<_>>().join(" or ");
     [format!("You compare {} attempts at one task. Each was made by an agent of its own that did not see the others{}. One of them will be kept and the others thrown away: nothing of two attempts is ever put together{}. Your job is to say which one, and why.", passed.len(), if research { "" } else { ", in a worktree and on a branch of its own, and each passed the repo's check" }, if research { " in the repo" } else { "" }),
-        if research { "This task is research only: each attempt's whole result is a report. Read every report whole, and check what they claim where you can.".into() } else { "Read each attempt's whole change and what surrounds it, and try each one: run it, look at what it does with the awkward inputs. Judge them against what was asked: which does all of it, correctly, with the least risk? A smaller change that does the job beats a larger one. Ignore taste and style.".to_string() },
+        if research { "This task is research only: each attempt's whole result is its closing note. Read every one whole, and check what they claim where you can.".into() } else { "Read each attempt's whole change and what surrounds it, and try each one: run it, look at what it does with the awkward inputs. Judge them against what was asked: which does all of it, correctly, with the least risk? A smaller change that does the job beats a larger one. Ignore taste and style.".to_string() },
         "You are here to compare, not to fix. Change, commit, push and merge nothing, in any of the worktrees.".into(),
         reviewer_board_rule(),
         format!("Task: {}", t.s("title")), if desc.is_empty() { String::new() } else { format!("Details:\n{desc}") },

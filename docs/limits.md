@@ -75,7 +75,7 @@ Stopping the task yourself (`Ctrl+X`, `herdr-board stop <id>`) takes the limit's
 
 - **The task panel**, while an agent runs on a task with a limit, under Status: `Time 1h12m of 2h, this run` and
   `Tokens 1.2m of 2m`. From four fifths of a limit on, they turn amber. Under Settings: `Limits 2h a run · 2m tokens`.
-  Under Session, full screen: `Used so far`, the tokens counted for the task (once a limit was set for it).
+  Under Session, full screen: `Used so far`, the tokens counted for the task, independently of whether a limit was set.
 - **The row** says it from four fifths on, before what the agent is doing: `1h40m of its 2h · Running the tests`.
 - **A stopped task** has a part of its own, "Stopped at a limit": what stopped it, what it had used, and the three ways
   on.
@@ -117,9 +117,9 @@ Choose the count with that in mind (`show <id>` and the task panel say what a ta
 - **The count is made at the end of each turn**, the agent's and the reviewer's. So one turn can pass the limit: a task
   with `limit.tokens 5m` whose agent uses 6m in its first turn is stopped at 6m, not 5m. A long turn is what
   `limit.time` is for.
-- **While no limit is set for a task, the board reads no conversation at all**: it only writes down which ones the task
-  had. The moment a limit is set, all of them are read, so a limit set late still counts the whole task, every review
-  that ended before included.
+- **Usage is measured even without a limit**, incrementally from complete transcript lines. Conversations not yet
+  available are remembered and counted when found. A limit set late still counts the whole task, including previous
+  reviews. `usage ID --json` separates fresh input, cache creation, cache reads, output and requests.
 - **A program whose tokens the board cannot count** adds nothing, and `show <id>` says for it that `limit.tokens` does
   nothing (`does nothing for <program>: its tokens cannot be counted`). The three programs whose conversation the board
   reads (Claude Code, Codex, pi) can all be counted; Herdr's other programs cannot ([agents](agents.md)).

@@ -27,6 +27,7 @@ pub fn run_job(job: &str, id: &str, extra: &[String]) -> i32 {
         "prpoll" => poll_prs(),
         // What ended tasks left behind (leftovers/sweep.rs).
         "sweep" => { crate::leftovers::sweep::sweep(); }
+        "summaries" => crate::digest::run::job(),
         // What the tasks waited for on other machines are now (after/far_ask.rs).
         "afterfar" => crate::after::far_ask::far_pass(),
         // Its id is a herdr session, not a task.

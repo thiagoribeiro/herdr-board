@@ -38,7 +38,7 @@ fn research_only_the_rules_say_how_to_wait_and_how_to_finish_an_interim_report_a
     let said = sw::delegate::rules::rules(&task(&id));
     for want in ["report proj/1 --state blocked", "only way to say that you are waiting, and it holds for one stop: run it every time you stop for the human's answer",
         "A stop without it means you are finished, whatever your last message, your report or your closing note says", "Never run it to put off the review of finished work",
-        "Saving the report finishes nothing: you may save it early"] { assert!(said.contains(want), "{want}: {said}"); }
+        "Your result is your closing note"] { assert!(said.contains(want), "{want}: {said}"); }
     let dir = sw::research::report_folder(&task(&id));
     std::fs::create_dir_all(&dir).unwrap(); std::fs::write(dir.join("report.md"), "# Interim\n\nAnswered 1 to 12.\n").unwrap();
     std::fs::write(sw::store::files::dir_of(&id).join("closing-note.md"), "NOT FINISHED: waiting for the human.\n").unwrap();

@@ -3,6 +3,7 @@
 //! out" with no reason given. A message longer than one argument may be is handed over in a file. A start that fails
 //! says why in plain words, what to do, and where the whole account is.
 use crate::common;
+use crate::common::prompt_text as text;
 use crate::coordinator::coord_world;
 use common::*;
 use serde_json::{json, Value};

@@ -2,15 +2,20 @@
 pub const HELP: &str = r#"herdr-board: a work board for herdr
 
   herdr-board                     open the board here (in herdr: bind a key to the plugin action "open")
-  herdr-board add <title> [--desc TEXT] [--repo NAME|PATH] [--delegate] [--after ID[,ID…]] [--<setting> VALUE ...] [--research|--no-research] [--chat|--no-chat] [--on MACHINE]
+  herdr-board add <title> [--desc TEXT] [--repo NAME|PATH] [--delegate] [--after ID[,ID…]] [--follow-up ID] [--<setting> VALUE ...] [--research|--no-research] [--chat|--no-chat] [--on MACHINE]
                          [--route ENTRY --route.reason TEXT]
                                       (--research: research only, short for --research.only true. Its agent changes
-                                       nothing in the repo; the result is a report. --no-research: not research only,
+                                       nothing in the repo; the result is its closing note. --no-research: not research only,
                                        where a default says it is. --chat: chat only, short for --chat.only true: a
                                        conversation that changes nothing and ends only when you say: finish <id>.
                                        --on: add it on another machine the board knows, as that machine adds its own.
                                        --route: the catalog's entry it works on (models catalog), with why in a line)
   herdr-board list [--archived] [--all] [--pinned] [--query TEXT] [--json]
+  herdr-board status [ID ...] [--all] [--repo NAME] [--json]  current owner, next action, blockers and cached result; no model call
+  herdr-board summary [ID ...] [--repo NAME] [--json]        cached delivery summaries and original evidence
+  herdr-board usage [ID ...] [--repo NAME] [--json]          measured new/cache/output tokens, independently of limits
+  herdr-board batch <delegate|approve|stop|retry|review|fix|archive|restore> ID ... [--request-id ID] [--json]
+                                      per-task outcomes in one call; a repeated request-id reuses its receipt without repeating work
   herdr-board report <id> --state idle|working|blocked|done|error [--kind question|permission|auth] [--msg TEXT] [--title TEXT]
                          [--progress 0-100] [--eta MINUTES]   (your own task, with --state working: how far, and minutes left)
   herdr-board describe <id> <text>          write or replace a task's description
@@ -71,6 +76,12 @@ pub const HELP: &str = r#"herdr-board: a work board for herdr
                                                 say something to it (it is started when it is not running); --delegate is
                                                 the board's tab: what it adds from this message gets an agent at once
   herdr-board coordinator where             where the human was when they last wrote to it from the board (for the Coordinator itself)
+  herdr-board coordinator context           compact task states and cached results, without a model turn
+  herdr-board coordinator usage             total and last-request token measurements, new and cached separately
+  herdr-board coordinator memory [JSON]     read or save decisions, constraints and questions (string arrays, at most 12 KB)
+  herdr-board coordinator history           saved session references from checkpoints
+  herdr-board coordinator checkpoint        after saving memory, start a fresh chat with the same program, model and effort; history stays
+  herdr-board coordinator help [TOPIC]      operating reference, one topic at a time (or all), loaded only when needed
   herdr-board coordinator restart           start its program again, in the same conversation
   herdr-board coordinator new [--agent KIND[/MODEL]] [--effort E]
                                                 a fresh one; with options, that choice is for this one only

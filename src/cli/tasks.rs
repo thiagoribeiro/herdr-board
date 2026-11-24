@@ -49,6 +49,8 @@ pub fn command(cmd: &str, a: &Args) -> Res<(Value, String)> {
             let from = me.as_ref().map(|c| c.0.t("id")).unwrap_or_default();
             // What it is to wait for is checked before it is added: a refused --after adds nothing.
             let after = flag("after").map(|r| crate::after::checked(None, &crate::after::refs_of(&r))).transpose()?;
+            // The task it continues (docs/coordinator.md): its agent is handed that task's work (after/handed.rs).
+            let follow = flag("follow-up").map(|r| crate::store::tasks::find(&r).map(|d| d.t("id"))).transpose()?;
             let opts = filing::AddOpts { description: flag("desc").or_else(|| flag("description")).unwrap_or_default(), repo: flag("repo").unwrap_or_default(), research, settings, from };
             // On another machine the board knows (remote/add.rs); in an autopilot turn within its limits (autopilot/add.rs).
             // The catalog's entry it works on (store/route.rs), checked before anything is added.
@@ -57,7 +59,7 @@ pub fn command(cmd: &str, a: &Args) -> Res<(Value, String)> {
             let route_dropped = matches!(&pilot, Some(co) if route.is_some() && !crate::store::settings::pilot_values::may_change(&crate::autopilot::record::words(co, "autopilot.mayChange"), "worker.agent"));
             if route_dropped { route = None; }
             if let Some(r) = &route { if flags.has("on") { crate::fail!("--route goes with a task of this machine: on another machine, name the model (--worker.agent)."); } crate::store::route::checked(r)?; }
-            if let Some(on) = flag("on") { return add_on(&on, &rest(1), opts, flags.b("delegate"), pilot.as_ref()); }
+            if let Some(on) = flag("on") { if follow.is_some() { crate::fail!("--follow-up names a task of this machine, so it cannot go with --on {on}: add the follow-up on the machine of the task it continues. Nothing was added."); } return add_on(&on, &rest(1), opts, flags.b("delegate"), pilot.as_ref()); }
             // In an autopilot turn: within its limits, and started at once by `autopilot.startAtOnce` (autopilot/add.rs).
             let (t, start, dropped) = match &pilot {
                 Some(co) => { let mut a = crate::autopilot::add::add(co, &here, &rest(1), opts, after.as_deref().unwrap_or(&[]), flags.b("delegate"))?; if route_dropped { a.dropped.push("--route".into()); } (a.task, a.start, crate::autopilot::add::dropped_words(&a.dropped)) }
@@ -71,6 +73,7 @@ pub fn command(cmd: &str, a: &Args) -> Res<(Value, String)> {
             if !flags.b("delegate") && !crate::util::env_set("HERDR_PLUGIN_ID") { if let Some(p) = crate::util::env_val("HERDR_PANE_ID") { tab = crate::coordinator::requests::tab_turn(&p, &current_socket()); } }
             let after = after.filter(|d| !d.is_empty());
             if let Some(d) = &after { crate::store::tasks::set(t.s("id"), json!({ "after": d }))?; }
+            if let Some(f) = &follow { crate::store::tasks::set(t.s("id"), json!({ "followUp": f }))?; }
             let on = if flags.b("delegate") || tab || start {
                 let d = start::delegate(t.s("id"), vec![])?;
                 let how = crate::after::waiting_words(&d).map(|w| format!(", it {w}")).unwrap_or_else(|| ", an agent is on it".into());
@@ -78,6 +81,8 @@ pub fn command(cmd: &str, a: &Args) -> Res<(Value, String)> {
             } else if let Some(d) = &after { format!(", it will wait for {} to be done once it is delegated", crate::after::names(d)) } else { String::new() };
             (shown_of(t.s("id")), format!("{}: added{routed}{}{on}{}{dropped}", t.s("id"), if crate::chat_only::is_chat(&t) { " as chat only" } else if is_research(&t) { " as research only" } else { "" }, title_note(&rest(1))))
         }
+        "status" | "summary" | "usage" => super::economy::command(cmd, a)?,
+        "batch" => super::batch::command(a)?,
         "list" | "ls" if flags.b("pinned") => { let keys = repo_keys(); super::pins::list(board(true), &|t| line(t, &keys), &brief) }
         "list" | "ls" => {
             let q = flag("query").unwrap_or_default().trim().to_lowercase(); // a task is found by its number and its tag too: 134, #134, hsw-134
@@ -220,6 +225,21 @@ fn coordinator(a: &Args, here: &std::path::Path, me: Option<&(Obj, &str)>) -> Re
     let rest = a.pos.iter().skip(2).cloned().collect::<Vec<_>>().join(" ");
     match what {
         "where" => return Ok((json!({ "where": state::get(&socket).map(|c| c.at("where").clone()).unwrap_or(json!([])) }), r::where_text(&socket))),
+        "context" => { let co = crate::coordinator::co::Co::from(&socket); let v = co.repo().map(crate::coordinator::context::project).unwrap_or_else(|| Value::Array(crate::store::tasks::list(Default::default()).iter().map(crate::task_status::snapshot).collect())); return Ok((v.clone(), v.to_string())); }
+        "usage" => { let co = crate::coordinator::co::Co::from(&socket); crate::coordinator::usage::count(&co); let c = state::get(&co); let v = json!({ "total": c.at("usage"), "lastRequest": c.at("requestUsage"), "history": c.at("requestHistory"), "monetaryCost": null }); return Ok((v.clone(), v.to_string())); }
+        "memory" => { let co = crate::coordinator::co::Co::from(&socket); if !rest.is_empty() { let v: Value = serde_json::from_str(&rest)?; crate::coordinator::context::remember(&co, &v)?; } let v = state::get(&co).at("memory").clone(); return Ok((v.clone(), v.to_string())); }
+        "history" => { let v = state::get(&socket).at("checkpoints").clone(); return Ok((v.clone(), v.to_string())); }
+        "checkpoint" => {
+            let co = crate::coordinator::co::Co::from(&socket);
+            let c = state::get(&co).ok_or_else(|| crate::err::Error::from("No coordinator to checkpoint"))?;
+            if !c.at("memory").is_object() { crate::fail!("Save durable memory before checkpointing; conversation history is kept"); }
+            if c.at("memory").i("at") < c.i("sentAt") { crate::fail!("Refresh durable memory after the latest request before checkpointing"); }
+            let mut run = c.o("run").cloned().ok_or_else(|| crate::err::Error::from("No running coordinator to checkpoint"))?;
+            if c.b("observedModel") { run.put("model", c.at("observedModel").clone()); }
+            state::change(&co, |c| { let mut h = c.arr("checkpoints").to_vec(); h.push(json!({ "session": c.at("session"), "run": c.at("run"), "at": crate::clock::now(), "last": c.at("last") })); c.put("checkpoints", h); true })?;
+            r::fresh(Some(run), &co)?;
+        }
+        "help" => { let co = crate::coordinator::co::Co::from(&socket); let v = crate::coordinator::rules::help(&co, &crate::flow::send::shim().display().to_string(), &rest)?; return Ok((json!({ "reference": v }), v)); }
         // From a task's agent or reviewer: the turn it starts is marked with who sent it (autopilot/turn.rs).
         "tell" => { if rest.is_empty() { crate::fail!("coordinator needs the text. Try: herdr-board help"); } r::send_as(here, &rest, a.flags.b("delegate"), "", &socket, me.map(|(t, role)| json!({ "task": t.s("id"), "role": role })).unwrap_or(Value::Null))?; }
         "restart" => { r::restart(&socket)?; }

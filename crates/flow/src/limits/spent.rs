@@ -3,7 +3,6 @@
 //! stopped, kept on the task as `spent.files[<file>]`; `spent.total` is their sum. While no limit is said, the
 //! conversations are only written down (`spent.owed`) and read when one is. `spent.base` is where the count of
 //! `limit.tokens` starts: 0, then the total at the moment you said to carry on after the limit stopped the task.
-use super::run::limit_said;
 use crate::agents::{adapter, kinds::kind, read_tokens};
 use crate::json::*;
 use crate::store::repos::cwd_of;
@@ -40,14 +39,22 @@ pub fn counted(t: &Task, role: &str) -> Option<Obj> {
         if let Some(now) = read_tokens::tokens(e.s("kind"), &file, &was) { if was.is_null() || was.at("at") != now.at("at") || was.at("n") != now.at("n") { files.insert(key, now); changed = true; } }
     };
     let owed = spent.arr("owed").to_vec();
+    let unresolved: Vec<Value> = owed.iter().filter(|e| file_of(e).is_none()).cloned().collect();
     for e in &owed { read(Some(e)); }
     read(known(t, role).as_ref());
     if !changed && owed.is_empty() { return None; }
     let mut rest = spent.clone();
-    rest.del("owed");
+    if unresolved.is_empty() { rest.del("owed"); } else { rest.put("owed", unresolved); }
     let total: f64 = files.values().map(|f| f.f("n")).sum();
     rest.put("files", files);
     rest.put("total", total);
+    let mut metrics = json!({});
+    for f in rest.at("files").as_object().into_iter().flat_map(|m| m.values()) {
+        for k in ["input", "cacheWrite", "cacheRead", "output", "requests"] { metrics[k] = json!(metrics.f(k) + f.at("metrics").f(k)); }
+    }
+    rest.put("metrics", metrics);
+    let partial = rest.at("files").as_object().is_some_and(|m| m.values().any(|f| f.b("partial")));
+    rest.put("partial", partial);
     Some(rest)
 }
 /// Count a role's conversation onto its task. Returns the task as it now is. While no limit is said, the conversation
@@ -55,7 +62,7 @@ pub fn counted(t: &Task, role: &str) -> Option<Obj> {
 pub fn count(id: &str, role: &str, wait_ms: i64) -> Option<Task> {
     let seen = get(id)?;
     let r = (|| -> crate::err::Res<Task> {
-        if !limit_said(&seen) {
+        if known(&seen, role).as_ref().and_then(file_of).is_none() {
             let Some(e) = known(&seen, role) else { return Ok(seen.clone()) };
             if !can_count(e.s("kind")) || seen.at("spent").arr("owed").iter().any(|o| same(o, &e)) { return Ok(seen.clone()); }
             let role = role.to_string();
@@ -67,7 +74,6 @@ pub fn count(id: &str, role: &str, wait_ms: i64) -> Option<Task> {
                 Ok(Change::Write)
             });
         }
-        if counted(&seen, role).is_none() { return Ok(seen.clone()); }
         let role = role.to_string();
         update_wait(id, wait_ms, move |t| { match counted(t, &role) { Some(s) => { t.put("spent", s); Ok(Change::Write) } None => Ok(Change::Keep) } })
     })();

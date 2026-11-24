@@ -31,7 +31,7 @@ pub fn helpers_ready() -> bool { !watcher_off() && (stand_in().is_some() || one_
 
 /// Helper calls are detached from the board's terminal (own session, no tty), so herdr does not mistake them for an
 /// agent in the board's pane. They find `herdr-board` on their PATH and never start the keeper.
-fn run_helper(cmd: OneShot, extra_env: &[(&str, &str)], done: impl FnOnce(i32, String, String) + Send + 'static) {
+pub(crate) fn run_helper(cmd: OneShot, extra_env: &[(&str, &str)], done: impl FnOnce(i32, String, String) + Send + 'static) {
     use std::io::{Read, Write};
     use std::process::{Command, Stdio};
     user_env();
@@ -47,12 +47,14 @@ fn run_helper(cmd: OneShot, extra_env: &[(&str, &str)], done: impl FnOnce(i32, S
         let Ok(mut child) = child else { return done(1, String::new(), String::new()) };
         if let Some(mut i) = child.stdin.take() { let _ = i.write_all(cmd.stdin.unwrap_or_default().as_bytes()); }
         let pid = child.id() as i32;
-        let killer = std::thread::spawn(move || { std::thread::sleep(std::time::Duration::from_millis(one::CALL_MS as u64)); unsafe { libc::kill(-pid, libc::SIGKILL); } });
+        let (finished, wait) = std::sync::mpsc::channel::<()>();
+        let killer = std::thread::spawn(move || { if wait.recv_timeout(std::time::Duration::from_millis(one::CALL_MS as u64)) == Err(std::sync::mpsc::RecvTimeoutError::Timeout) { unsafe { libc::kill(-pid, libc::SIGKILL); } } });
         let mut out = String::new(); let mut err = String::new();
+        let stderr = child.stderr.take().map(|mut e| std::thread::spawn(move || { let mut s = String::new(); let _ = e.read_to_string(&mut s); s }));
         if let Some(mut o) = child.stdout.take() { let _ = o.read_to_string(&mut out); }
-        if let Some(mut e) = child.stderr.take() { let _ = e.read_to_string(&mut err); }
+        if let Some(e) = stderr { err = e.join().unwrap_or_default(); }
         let code = child.wait().ok().and_then(|s| s.code()).unwrap_or(1);
-        drop(killer);
+        let _ = finished.send(()); let _ = killer.join();
         let n = err.chars().count();
         done(code, out, err.chars().skip(n.saturating_sub(4000)).collect());
     });

@@ -36,7 +36,7 @@ const SETTING: &str = "any work setting by its name (--review.when never)";
 pub struct Takes { pub flags: &'static [&'static str], pub settings: bool }
 const fn f(flags: &'static [&'static str]) -> Takes { Takes { flags, settings: false } }
 const fn s(flags: &'static [&'static str]) -> Takes { Takes { flags, settings: true } }
-const ADD: &[&str] = &["desc", "description", "repo", "delegate", "research", "chat", "after", "on", "route", "route.reason"];
+const ADD: &[&str] = &["desc", "description", "repo", "delegate", "research", "chat", "after", "follow-up", "on", "route", "route.reason"];
 const LIST: &[&str] = &["archived", "all", "query", "pinned"];
 const WHERE: &[&str] = &["repo", "task", "automation", "main-coordinator", "machine-coordinator", "project-coordinator"];
 const AUTO_ADD: &[&str] = &["prompt", "desc", "schedule", "when", "every-repo", "if", "repo", "research", "chat", "route"];
@@ -54,6 +54,8 @@ fn takes(cmd: &str, sub: &str) -> Option<Takes> {
         "run" => f(&["force", "merged"]),
         "add" | "new" => s(ADD),
         "list" | "ls" => f(LIST),
+        "status" | "summary" | "usage" => f(&["all", "repo"]),
+        "batch" => s(&["request-id", "anyway", "research", "chat", "after", "now"]),
         "report" => f(&["state", "kind", "msg", "title", "progress", "eta", "desc", "repo"]),
         "describe" | "rename" | "tell" | "stop" | "start" | "pick" | "review" | "retry" | "fix" | "finish" | "details" | "clear" => f(&[]),
         "pin" | "unpin" => f(&["on"]),

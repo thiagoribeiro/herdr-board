@@ -47,7 +47,11 @@ pub fn session_name(socket: &str) -> String {
     if n >= 3 && parts[n - 1] == "herdr.sock" && parts[n - 3] == "sessions" { parts[n - 2].to_string() } else { "default".into() }
 }
 pub fn in_herdr() -> bool { std::env::var("HERDR_ENV").as_deref() == Ok("1") }
-pub fn socket_exists(socket: &str) -> bool { use std::os::unix::fs::FileTypeExt; std::fs::metadata(socket).map(|m| m.file_type().is_socket()).unwrap_or(false) }
+pub fn socket_exists(socket: &str) -> bool {
+    use std::os::unix::fs::FileTypeExt;
+    std::fs::metadata(socket).map(|m| m.file_type().is_socket() ||
+        (crate::util::env_set("HERDR_BOARD_INLINE") && m.is_file() && m.len() == 11 && std::fs::read(socket).ok().as_deref() == Some(b"fake socket"))).unwrap_or(false)
+}
 /// Whether two paths name the same herdr socket: alike as text, or once links are followed (a config folder reached
 /// through a symlink spells the same session's socket another way). A socket not there yet is followed as far as its
 /// folder. Asked for every task on every pass: what a path resolves to is kept for a minute.

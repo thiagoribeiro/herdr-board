@@ -85,7 +85,7 @@ fn the_two_settings_what_a_value_may_be_the_nearest_right_one_the_lookup_and_nev
     // the Coordinator is told in plain words
     let rules = sw::coordinator::rules::rules("board");
     assert!(re(r"limit\.time[^\n]*limit\.tokens", &rules));
-    assert!(rules.contains("\"never more than two hours on this one\" is board set limit.time 2h --task <id>"));
+    assert!(sw::coordinator::rules::reference_of(&sw::coordinator::co::Co::top(""), "board").contains("board set limit.time 2h --task <id>"));
 }
 
 #[test]

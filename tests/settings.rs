@@ -35,7 +35,7 @@ fn one_order_for_every_work_setting_this_task_your_entry_for_the_repo_you_the_re
     unset_value("check.command", &Scope::task(&task(&id))).unwrap(); assert_eq!(on("check.command"), p("from the entry", "your entry for proj"));
     unset_value("check.command", &Scope::repo("proj")).unwrap(); assert_eq!(on("check.command"), p("from you", "you"));
     unset_value("check.command", &you()).unwrap(); assert_eq!(on("check.command"), p("from the file", "the repo's file"));
-    assert_eq!(saved(), json!({ "watcher.agent": "none", "coordinator.agent": "none", "repos": { "proj": { "repo": { "key": "PRJ" } } } })); // nothing of it is left in the file: only the key the board gave the repo
+    assert_eq!(saved(), json!({ "watcher.agent": "none", "summary.agent": "none", "coordinator.agent": "none", "repos": { "proj": { "repo": { "key": "PRJ" } } } })); // nothing of it is left in the file: only the key the board gave the repo
     use sw::store::settings_list::{entry_of, names, Kind};
     for name in names() {
         let t = task(&id);
@@ -81,7 +81,7 @@ fn board_settings_are_yours_only_refused_on_a_task_and_for_a_repo_with_how_to_se
     let id = w.add("One");
     use sw::store::settings_list::{board, work};
     for name in board() {
-        assert!(has(name, r"^(board|coordinator|watcher|voice)\."), "{name}");
+        assert!(has(name, r"^(board|coordinator|watcher|summary|voice)\."), "{name}");
         let n = regex::escape(name);
         refused(set_value(name, &json!("x"), &Scope::task(&task(&id))), &format!(r"{n} is a board setting: it is yours only and cannot be set on a task\. Set it for yourself: herdr-board set {n} <value>"));
         refused(set_value(name, &json!("x"), &Scope::repo("proj")), "is a board setting: it is yours only and cannot be set for a repo");

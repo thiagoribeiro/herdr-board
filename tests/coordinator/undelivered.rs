@@ -1,6 +1,7 @@
 //! `coordinator tell` where the herdr program cannot be found (an ssh forced command, cron): the message is queued all
 //! the same, and the answer says it is not delivered, and why, as an error; `doctor` names messages that wait so.
 use crate::common;
+use crate::common::prompt_text as text;
 use common::*;
 use serde_json::{json, Value};
 use sw::coordinator::state;

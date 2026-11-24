@@ -24,18 +24,18 @@ fn every_agent_is_told_a_report_never_goes_into_the_repo_a_research_agent_that_i
     assert!(!is_research(&task(&plain)) && is_research(&task(&research)));
     let tree = |id: &str| { let mut t = task(id); t.put("worktree", "/tmp/x"); t.put("branch", "work/1-x"); t.put("repoFile", json!({ "check.command": "npm test" })); sw::delegate::rules::rules(&t) };
     let (told, told_research) = (tree(&plain), tree(&research));
-    // Any task, in any repo: where a report goes, and never a commit of one.
-    for t in [&told, &told_research] { assert!(t.contains("never goes into the repo: do not commit one, in no folder") && t.contains("private link"), "{t}"); }
+    // Any task, in any repo: a report goes in the closing note, a file only when asked for, and never a commit of one.
+    for t in [&told, &told_research] { assert!(t.contains("never goes into the repo: do not commit one, in no folder. It goes in your closing note, whole, never as a link") && t.contains("Only when the human plainly asked for a file or a page"), "{t}"); }
     let reports = sw::store::files::reports_dir().join("proj");
-    assert!(told.contains(&format!("Save it in {}/ (this task's own folder among the board's reports, outside every repo)", reports.join("1").display())), "{told}");
+    assert!(told.contains(&format!("save it in {}/ (this task's own folder among the board's reports, outside every repo)", reports.join("1").display())), "{told}");
     assert!(told.contains("Commit your work on this branch") && told.contains("only counts as done when this passes: npm test") && !told.contains("research only"), "{told}");
     // A research-only task: nothing changes, nothing is committed, there is no check to pass.
     let r = &told_research;
     assert!(r.contains("This task is research only: change nothing in the repo. Add, edit and delete no file, and commit nothing"), "{r}");
-    assert!(r.contains("the work that should follow from it is a short list in that report (\"Also noticed\"): nothing else is done with it, and you add no task for it"), "{r}");
+    assert!(r.contains("the work that should follow from it as a short list in it (\"Also noticed\"): nothing else is done with it, and you add no task for it"), "{r}");
     assert!(r.contains("Commit nothing on this branch") && r.contains(&format!("{}/", reports.join("2").display())), "{r}");
     assert!(!r.contains("Commit your work on this branch") && !r.contains("only counts as done when this passes"), "{r}");
-    let coordinator = sw::coordinator::rules::rules("board");
+    let coordinator = sw::coordinator::rules::reference_of(&sw::coordinator::co::Co::top(""), "board");
     assert!(coordinator.contains("add the task with --research") && coordinator.contains("board delegate <id> --research (--no-research turns it off again)"), "{coordinator}");
     // The reviewer of one reviews the report, and a change to the repo is a finding.
     let b = brief(&task(&research));

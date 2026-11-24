@@ -2,12 +2,15 @@
 //! your words going in exactly as typed (enter alone: it decides what to start), its reply in the chat's box in place of
 //! what you said, alt+c only shows or hides that message, and where each message was sent from said to it.
 use crate::common;
+use crate::common::prompt_text as text;
 use common::board::open;
 use common::*;
 use serde_json::json;
 use sw::board::keys::key_name;
 use sw::json::*;
 
+/// A task's run that ended reaches its coordinator's chat; a follow-up is handed the task it continues.
+mod followup;
 /// tell where herdr cannot be found: queued, not delivered, and said so.
 mod notes;
 mod undelivered;

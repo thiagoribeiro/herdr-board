@@ -50,9 +50,10 @@ row is that machine's, and this one is not on the board.
 
 ## Your message, and where you were
 
-Your words reach it exactly as typed. Which repo you were in and which task you had open are kept beside each message,
-and the Coordinator looks them up itself (`herdr-board coordinator where` lists the last few messages, each with its
-own).
+Your words reach it as typed, with a hidden context block carrying that message's original repo, selected task,
+delegation intent and relevant cached results. It uses that context directly; `herdr-board coordinator where`
+remains a fallback for older messages. Task deliveries appear in its chat without starting a model turn.
+See [coordinator quality and economy](coordinator-economy.md) for summaries, batch receipts, memory and usage.
 
 A board opened from the Coordinator's own pane stays in the repo it was last in: that pane's folder is nobody's repo.
 
@@ -72,6 +73,32 @@ ask for that in your words ("fix the login page and start it"). On autopilot it 
 When it acted on the board, its message ends with one short line naming the ids in plain words: added, updated (a
 title, a description, settings), removed, started an agent, approved, archived, restored. For example: "Added proj/12
 and started an agent on it". The commands answer in the same words ([roles and commands](roles-and-commands.md)).
+
+## When a task ends, it tells you in the chat
+
+The board displays the task's result directly in its coordinator's chat, even when that coordinator is stopped.
+It does not queue a message, start a conversation or require a coordinator response. A small tool-free helper
+can prepare a persistent summary; unchanged evidence reuses it without another model call. Original notes,
+requirements and review findings stay available through `details <id>` and `summary <id> --json`.
+A research result is delivered as content in the chat; a report file is created only when you ask for one.
+See [coordinator economy](coordinator-economy.md).
+
+## Continuing earlier work
+
+A request that continues a task ("review it", "now change X", "do the same for Y") is read in the light of the
+conversation and of that task. The Coordinator adds it as a follow-up of the task it continues:
+
+```
+herdr-board add "Review the parser change" --research --follow-up PRJ-1
+```
+
+- The board keeps the link (`details <id>` shows it as `followUp`), and the new task's agent is handed that task's work
+  when it starts: its id and title, its pull request and merge commit or its branch, its closing note and its last
+  review's findings, with the rule to keep to that scope. "Review the code" right after PRJ-1 finished is a review of
+  PRJ-1's change, not an audit of the whole repo.
+- For a task whose agent is still on it, the Coordinator tells that agent instead (`board tell <id> …`).
+- **When it is not sure** which task the request continues, or how far it reaches, it asks you before it adds or
+  delegates anything.
 
 ## Going into it
 

@@ -1,6 +1,6 @@
-//! Telling you that a task needs you, is ready to approve, or failed: the `board.notify` setting. `bell` rings the
-//! terminal bell where a board is open; a command is run once per event, with the task's id, its title and what
-//! happened in its environment; `none` does neither.
+//! Telling you that a task needs you, is ready to approve, failed, stalled, conflicts with main or was merged outside
+//! the board: the `board.notify` setting. `bell` rings the terminal bell where a board is open; a command is run once
+//! per event, with the task's id, its title and what happened in its environment; `none` does neither.
 use crate::clock::now;
 use crate::json::*;
 use crate::store::attempts::attempts_of;
@@ -11,10 +11,15 @@ use crate::store::tasks::{update, Change};
 pub fn event_of(t: &Obj) -> &'static str {
     if t.b("archivedAt") { return ""; }
     let st = t.s("stage");
+    if st == "done" && t.b("mergedOutside") { return "merged outside"; }
     if ["asks", "reviewneeds", "plan", "pick"].contains(&st) || (st == "stopped" && t.b("limitStop")) || (st == "after" && t.b("afterBlocked")) { return "needs you"; }
     if st == "attempts" { return if attempts_of(t).iter().any(|c| ["asks", "reviewneeds"].contains(&c.s("stage"))) { "needs you" } else { "" }; }
+    if st == "approval" && (t.b("failure") || t.b("prFailure") || t.b("syncBlocked")) { return "needs you"; }
+    // Stalled or in conflict (stall.rs), a conflict held as a failure too; main out of reach is only said on its row,
+    // the board keeps trying.
+    if let Some(x) = crate::stall::stall_of(t, now()).filter(|x| x.event != "unreachable") { return x.event; }
     if st == "failed" || st == "nosummary" { return "failed"; }
-    if st == "approval" { return if t.b("failure") || t.b("prFailure") || t.b("syncBlocked") { "needs you" } else { "ready to approve" }; }
+    if st == "approval" { return "ready to approve"; }
     ""
 }
 fn noted(t: &Obj, event: &str) -> bool { t.at("notice").s("event") == event && (event.is_empty() || t.at("notice").s("stage") == t.s("stage")) }

@@ -17,7 +17,13 @@ fn line_of(pid: i32) -> Vec<i32> {
     v
 }
 /// This process and the ones it runs under.
-pub fn own_line() -> Vec<i32> { line_of(std::process::id() as i32) }
+pub fn own_line() -> Vec<i32> {
+    let me = std::process::id() as i32;
+    let mut line = line_of(me);
+    // Simulated process ids belong to the fake's namespace, not a sandbox's real ancestors (often pid 2).
+    if let Some(fake) = crate::herdr::cli::fake() { line.retain(|p| *p == me || fake.alive(*p as i64).is_none()); }
+    line
+}
 /// A process that is gone, or a zombie that only waits for its parent to read it.
 fn ended(pid: i32) -> bool { !crate::herdr::procs::running(pid as i64) }
 #[cfg(target_os = "linux")]
