@@ -23,6 +23,8 @@ Each line has:
 | the next step | one sentence: what to approve, what it waits for, or why it stalled ([troubleshooting](troubleshooting.md#a-task-is-stalled)) |
 
 Done and archived tasks are left out; `--all` lists them too.
+Pass task ids (or comma-separated ids) to select tasks, including completed ones: `status BRD-1 BRD-3 --json`.
+`--repo <name>` filters the selection. The coordinator context and batch receipts use the same status rules.
 
 ## For scripts
 
@@ -35,5 +37,8 @@ Done and archived tasks are left out; `--all` lists them too.
 | `state` | where it stands, in the list's words |
 | `since`, `for` | since when (milliseconds since 1970), and how long, in words (`14h`) |
 | `whose` | `you`, `agent`, `board` or `github` |
+| `owner` | machine-oriented equivalent: `human`, `agent`, `reviewer`, `board`, `github` or `none` |
 | `next` | the next step |
 | `stall` | `{ "event", "why" }` when it is stalled (`stalled`, `conflict`, `unreachable`), else `null` |
+
+The compact context also includes cached delivery, evidence, blockers, availability and measured usage when present.

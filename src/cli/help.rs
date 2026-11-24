@@ -2,10 +2,10 @@
 pub const HELP: &str = r#"herdr-board: a work board for herdr
 
   herdr-board                     open the board here (in herdr: bind a key to the plugin action "open")
-  herdr-board add <title> [--desc TEXT] [--repo NAME|PATH] [--delegate] [--after ID[,ID…]] [--<setting> VALUE ...] [--research|--no-research] [--chat|--no-chat] [--on MACHINE]
+  herdr-board add <title> [--desc TEXT] [--repo NAME|PATH] [--delegate] [--after ID[,ID…]] [--follow-up ID] [--<setting> VALUE ...] [--research|--no-research] [--chat|--no-chat] [--on MACHINE]
                          [--route ENTRY --route.reason TEXT]
                                       (--research: research only, short for --research.only true. Its agent changes
-                                       nothing in the repo; the result is a report. --no-research: not research only,
+                                       nothing in the repo; the result is its closing note. --no-research: not research only,
                                        where a default says it is. --chat: chat only, short for --chat.only true: a
                                        conversation that changes nothing and ends only when you say: finish <id>.
                                        --on: add it on another machine the board knows, as that machine adds its own.

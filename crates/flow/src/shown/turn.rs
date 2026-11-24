@@ -28,7 +28,7 @@ pub fn next_step(r: &Obj) -> String {
 }
 /// One task's line of `status`, as data: `t` is a task as the board shows it.
 pub fn status_of(t: &Obj, now: i64) -> Value {
-    let r = as_row(t);
+    let r = as_row(&if t.b("state") { t.clone() } else { crate::flow::live::saved(t) });
     json!({ "id": r.at("id"), "title": r.at("title"), "stage": r.at("stage"), "state": standing(&r), "since": r.at("at"), "for": age(now - r.i("at")),
         "whose": whose(&r), "next": next_step(&r), "stall": r.at("stall") })
 }

@@ -101,13 +101,27 @@ fn main_out_of_reach_says_when_it_was_last_tried_and_is_the_boards_turn() {
 #[test]
 fn an_agent_that_exits_after_a_successful_transcript_keeps_its_result() {
     let w = cut_world("60000", json!({ "review.when": "never" }));
-    w.script(json!({ "worker": [{ "status": "working", "then": { "ends": "claude-done", "note": "Completed successfully", "exit": true } }] }));
+    w.script(json!({ "worker": [{ "status": "working", "then": { "ends": "claude-finished-made", "note": "Completed successfully", "exit": true } }] }));
     let id = w.add("Successful exit");
     delegate(&id);
     assert_eq!(settle(&id).s("stage"), "working");
     w.go_on(&task(&id));
     let t = settle(&id);
     assert!(t.at("failure").is_null(), "a valid result must survive process exit: {t:?}");
+    assert_ne!(t.s("stage"), "working");
+}
+
+#[test]
+fn a_successful_transcript_without_a_note_is_not_replaced_by_an_exit_error() {
+    let w = cut_world("60000", json!({ "review.when": "never" }));
+    w.script(json!({ "worker": [{ "status": "working", "then": { "ends": "claude-finished-made", "exit": true } }] }));
+    let id = w.add("Successful transcript");
+    delegate(&id);
+    assert_eq!(settle(&id).s("stage"), "working");
+    w.go_on(&task(&id));
+    let t = settle(&id);
+    assert!(t.at("failure").is_null(), "{t:?}");
+    assert_eq!(t.s("summary"), "Carried on and finished it.");
     assert_ne!(t.s("stage"), "working");
 }
 

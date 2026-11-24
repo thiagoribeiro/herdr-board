@@ -27,6 +27,17 @@
 - Fixed: an agent whose program exited in the middle of its turn (after "API Error: Connection lost mid-response") stayed
   "working" with nothing for `retry` to send. It is now a real failure, retried by itself when its last words are a
   passing provider error.
+### The Coordinator
+
+- A request that continues a task is a follow-up of it: `add … --follow-up <id>` keeps the link (`details` shows it)
+  and hands the new task's agent that task's change, pull request or branch, closing note and review, to keep to that
+  scope. The Coordinator asks you first when it is not sure which task, or how far
+  ([continuing earlier work](docs/coordinator.md#continuing-earlier-work)).
+
+### Research
+
+- A research result, and any report, is the agent's closing note, brought to the Coordinator's chat. A file in the
+  task's reports folder, with its private link, only when you ask for one ([reports and research](docs/research.md)).
 
 ### Herdr's sidebar
 

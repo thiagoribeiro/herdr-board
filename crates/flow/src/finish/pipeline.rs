@@ -161,7 +161,7 @@ pub fn pipeline(id: &str, g: &mut Guard, text: &str, keep_intent: bool, reason: 
         return Ok(());
     }
     // Push and open a draft pull request, when an origin remote exists.
-    let mut note = if research && !t.b("report") { " No report was found.".to_string() } else { String::new() };
+    let mut note = if research && text.trim().is_empty() && !t.b("report") { " No result was found.".to_string() } else { String::new() };
     // A branch that brings main nothing is done without one: no change was needed, or the work is on main already (the
     // agent merged its own pull request, or pushed to main itself). Main was brought in just now, so that is where it is.
     let ask = ch.b("merge.pr") && flow::git::has_origin(&root);

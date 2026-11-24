@@ -126,7 +126,7 @@ fn the_settings_page_has_it_with_its_plain_label_and_a_row_from_another_machine_
     s.s.editing.as_mut().unwrap().at = n;
     let text = s.screen(120).join("\n");
     let flat = regex::Regex::new(r"\n *").unwrap().replace_all(&text, " ").to_string();
-    assert!(flat.contains("Research only: on · [off]. On: its agent changes nothing in the repo; the result is a report, and"), "{text}");
+    assert!(flat.contains("Research only: on · [off]. On: its agent changes nothing in the repo; the result is its closing note, and"), "{text}");
     assert!(re(r"› {3}Research only +off +research\.only", &text), "{text}");
     s.press(&["enter"]);
     assert_eq!(task(&id).at("settings"), &json!({ NAME: true }));

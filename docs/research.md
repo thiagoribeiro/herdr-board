@@ -1,11 +1,12 @@
 # Reports, and research-only tasks
 
 **A report never goes into the repo.** A report, a review or a research result is something an agent writes for you to
-read. It is not part of the product, so it is never committed, in no folder. It is kept with the task, and you get a
-private link to it.
+read. It is not part of the product, so it is never committed, in no folder. It goes in the agent's closing note, and
+the board brings that note to the Coordinator's chat when the task ends ([the Coordinator](coordinator.md#when-a-task-ends-it-tells-you-in-the-chat)):
+you read it there, not behind a link.
 
-**A research-only task changes nothing in the repo.** Its whole result is a report. Work that should follow from it is a
-short **Also noticed** list in that report: nothing adds a task for it.
+**A research-only task changes nothing in the repo.** Its whole result is its closing note. Work that should follow
+from it is a short **Also noticed** list in that note: nothing adds a task for it.
 
 ```
 herdr-board add "Why is the build slow?" --research
@@ -15,7 +16,10 @@ herdr-board add "Why is the build slow?" --research
 
 Every agent the board starts is told the same, in every repo:
 
-- **It writes the report into the task's own folder among the board's reports**:
+- **The result is its closing note**, written whole, never a link to a file. The board hands it to the chat of the
+  coordinator that added the task, and the coordinator gives it to you there.
+- **A file only when you plainly ask for one** (a page, a document). Then it writes it into the task's own folder among
+  the board's reports:
   `~/.herdr-board/reports/<repo>/<number>/` ([the home folder](home-folder.md)), as `index.html` (one page that
   stands by itself) or `report.md`. That folder is outside every repo, so the report cannot be committed by mistake, and
   it stays when the task's worktree goes.
@@ -72,13 +76,12 @@ every setting is, nearest answer first: **the task → your entry for that repo 
 ## What its agent is told
 
 - Change nothing in the repo: add, edit and delete no file, commit nothing.
-- The result is a report, saved as above.
-- Work that should follow from it is a short "Also noticed" list in that report. Nothing else is done with it, and the
+- The result is its closing note, whole enough to stand alone: never a link to it or a file instead.
+- Work that should follow from it is a short "Also noticed" list in that note. Nothing else is done with it, and the
   agent adds no task for it.
 - The repo's check is not mentioned: there is no change to check.
 
-Saving the report finishes nothing. The agent may save it early and add to it while it still waits for your answers, and
-you can open it meanwhile. The task is finished when its agent stops without saying that it waits
+The task is finished when its agent stops without saying that it waits
 ([an agent that waits for you is not finished](waiting-for-you.md)).
 
 ## What the board does when it finishes
@@ -91,18 +94,19 @@ than its own counts as a change.
 
 - The branch is not brought up to date with main, the repo's check does not run, nothing is pushed, and no pull request
   is opened.
-- The reviewer reviews the report, unless the task has no review (`reviewer: off` or `review: none`). It is told the task
-  is research only: it reads the report and checks it against what was asked and against the code and sources it speaks
-  of. A change to the repo that it finds (a commit elsewhere, something pushed) is a critical finding, and so is a missing
-  report. A review that fails the gate goes back to the agent like any other ([the gate](gate.md)).
-- The task ends as **done**, with nothing to merge and its report's link on the task. With no report in the folder, its
-  line ends with `No report was found.`
+- The reviewer reviews the result (the closing note), unless the task has no review (`reviewer: off` or `review: none`). It is told the task
+  is research only: it reads the closing note and checks it against what was asked and against the code and sources it
+  speaks of. A change to the repo that it finds (a commit elsewhere, something pushed) is a critical finding, and so is
+  a missing result. A review that fails the gate goes back to the agent like any other ([the gate](gate.md)).
+- The task ends as **done**, with nothing to merge, and its result goes to the Coordinator's chat. A report file the
+  human asked for has its link on the task. With no result at all (no closing note, no file), its line ends with
+  `No result was found.`
 
 **Anything changed:**
 
 - Nothing is committed, pushed, opened as a pull request, or merged.
-- The task goes back to its agent with the list of what changed, to move the result out of the repo and undo every
-  change, commits too.
+- The task goes back to its agent with the list of what changed, to move the result out of the repo into its closing
+  note and undo every change, commits too.
 - That is one round of the review loop. After `review.rounds` of them (3 by default), the task stops and waits for you.
   Its row says why: `Research only, but its agent changed the repo again after 3 rounds (2 changes in the repo): nothing was pushed, opened or merged`.
 - From there, send it back once more (`ctrl+r`). Or, if you want the change after all, delegate it again as an ordinary
