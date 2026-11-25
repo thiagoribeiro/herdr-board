@@ -55,7 +55,8 @@ pub fn approve(id: &str, seen: Option<(Value, Value)>, anyway: bool) -> Res<Said
         let mut mi = json!({ "approvedAt": now(), "repairs": t.at("mergeIntent").i("repairs"), "verifiedHead": t.at("reviewedHead") });
         // Merged in spite of GitHub's failed checks: they are not looked at again for this merge.
         if checks.is_some() { mi["anyway"] = json!(true); t.put("prFailure", Value::Null); }
-        t.put("mergeIntent", mi); t.put("checksWait", Value::Null);
+        // Your last yes, kept after the merge intent is gone: the diff key compares with it (board/update/diff.rs).
+        t.put("approvedHead", t.at("reviewedHead").clone()); t.put("mergeIntent", mi); t.put("checksWait", Value::Null);
         Ok(Change::Write)
     })?;
     flow::sidebar::tell_sidebar(&t);

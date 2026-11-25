@@ -141,6 +141,7 @@ pub fn run_as(s: &mut State, k: K, p: &Press, r: Option<&Obj>, fx: &mut Vec<Effe
         K::Archive => match r { Some(r) => act::archive_selected(s, r, fx), None if super::heads::selected(s).is_some() => super::archive_project::key(s, fx), None => s.flash("Select a task to archive or restore.", Ink::Muted) },
         K::Pin => super::pinned::key(s, r, fx),
         K::OpenLink => if let Some(r) = r { super::link::open(s, r, fx) },
+        K::Diff => match r { Some(r) => super::diff::key(s, r, fx), None => s.flash("Select a task to see its change.", Ink::Muted) },
         K::Settings => super::edit::open(s, r, fx),
         K::Undo => act::undo(s, fx),
         K::Find => { s.mode = Mode::Find; s.full = false; let f = s.filter.clone(); s.input.set_text(&f); }

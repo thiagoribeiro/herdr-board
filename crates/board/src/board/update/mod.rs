@@ -96,6 +96,7 @@ pub mod chat;
 pub mod coords;
 pub mod top;
 pub mod depth;
+pub mod diff;
 pub mod done;
 pub mod edit;
 pub mod edit_coord;

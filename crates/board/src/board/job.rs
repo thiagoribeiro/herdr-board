@@ -48,6 +48,8 @@ pub enum Job {
     OpenAgent { id: String, popup: bool },
     /// A task's link (`what`: its report, its pull request) in this machine's browser; copied where none opens it.
     OpenLink { link: String, what: String },
+    /// A task's change in your diff tool, in a pane split off `beside` (the board's, or in the popup the one you came from).
+    Diff { id: String, beside: String, popup: bool },
     FreeSize { pids: Vec<i64> },
     /// The first run's answers: which blocks to add to herdr's config.
     Setup { key: Option<String>, sidebar: Option<bool>, file: String },
@@ -224,6 +226,7 @@ fn run_one(job: Job) -> Done {
                 Ok(()) => Done::default(),
                 Err(why) => Done::say(format!("Nothing opens its {what} here ({why}): copied the link instead. {link}"), Ink::Yellow).and(Then::Copy(link)),
             },
+            Job::Diff { id, beside, popup } => super::update::diff::open_pane(&id, &beside, popup),
             Job::FreeSize { pids } => {
                 let ended = pids.iter().filter(|p| unsafe { libc::kill(**p as i32, libc::SIGTERM) } == 0).count();
                 if ended > 0 { Done::say(format!("Ended {}. The board has its own size again in a moment.", if ended == 1 { "the remote view of this pane".to_string() } else { format!("{ended} remote views of this pane") }), Ink::Green) }
