@@ -62,7 +62,12 @@ fn herdr_up(socket: &str) -> Res<()> {
     Ok(())
 }
 /// Say something to the Coordinator. It is started (or started again, in the same conversation) when it is not there.
-pub fn send(cwd: &Path, text: &str, delegate: bool, about: &str, co: impl Into<Co>) -> Res<Obj> { send_as(cwd, text, delegate, about, co, Value::Null) }
+/// A command the human typed (`!stop 12`, commands.rs) is run by the board instead, and answered in its chat.
+pub fn send(cwd: &Path, text: &str, delegate: bool, about: &str, co: impl Into<Co>) -> Res<Obj> {
+    let co = co.into();
+    if let Some(done) = super::commands::run(text, &co) { return done; }
+    send_as(cwd, text, delegate, about, co, Value::Null)
+}
 /// The same, from `sender` (a task's agent or reviewer that ran `coordinator tell`: `{ task, role }`), which the turn it
 /// starts is marked with (autopilot/turn.rs). Words that would pass for an autopilot wake are marked as none: only the
 /// board writes a wake. A wake not typed in yet waits behind these words. Where herdr cannot be found, the words are

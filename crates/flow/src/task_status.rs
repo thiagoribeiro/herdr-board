@@ -1,5 +1,10 @@
-//! Compact, factual task snapshots shared by status, coordinator context and operation receipts. No model is called.
+//! Compact, factual task snapshots shared by status (the command line's and the chat's `!status`), coordinator
+//! context and operation receipts. No model is called.
+use crate::err::Res;
 use crate::json::*;
+use crate::store::keys::{repo_keys, say_id};
+use crate::store::tasks::{find, list, ListOpts};
+use crate::text::{cut, pad};
 use crate::store::reviews::current_review;
 
 pub fn snapshot(t: &Obj) -> Value {
@@ -29,4 +34,23 @@ pub fn next_step(t: &Obj) -> (&'static str, String) {
     (owner, status.t("next"))
 }
 
-pub fn line(v: &Value) -> String { format!("{}  {}  {}  {}: {}", v.s("id"), v.s("title"), v.s("stage"), v.s("owner"), v.s("next")) }
+/// The tasks named (by `,` too), else every task (`all`: with the done and archived ones).
+pub fn tasks(ids: &[String], all: bool) -> Res<Vec<Obj>> {
+    if ids.is_empty() { return Ok(list(ListOpts { include_archived: all, ..Default::default() })); }
+    ids.iter().flat_map(|s| s.split(',')).map(find).collect()
+}
+/// What `herdr-board status` and the chat's `!status` say: a snapshot of each task named, else of each one not done
+/// (`all`: every one), of `repo` when one is given, as it is live now.
+pub fn status(ids: &[String], all: bool, repo: &str) -> Res<Vec<Value>> {
+    let live = crate::flow::live::board(true);
+    Ok(tasks(ids, all)?.into_iter()
+        .filter(|t| (repo.is_empty() || t.s("repo") == repo) && (!ids.is_empty() || all || !(["done", "tried"].contains(&t.s("stage")) || t.b("archivedAt"))))
+        .map(|t| snapshot(live.iter().find(|r| r.s("id") == t.s("id")).unwrap_or(&t))).collect())
+}
+/// One short line per task: its key and short title, where it stands and for how long, whose turn it is and the next
+/// step (shown/turn.rs). docs/status.md.
+pub fn said(rows: &[Value]) -> String {
+    if rows.is_empty() { return "No active tasks.".into(); }
+    let keys = repo_keys();
+    rows.iter().map(|r| format!("{} {} {} {} {}  {}", pad(&say_id(r.s("id"), &keys), 9), pad(&cut(r.s("title"), 32), 32), pad(r.s("state"), 16), pad(r.s("for"), 4), pad(r.s("whose"), 6), r.s("next"))).collect::<Vec<_>>().join("\n")
+}

@@ -54,6 +54,8 @@ Your words reach it as typed, with a hidden context block carrying that message'
 delegation intent and relevant cached results. It uses that context directly; `herdr-board coordinator where`
 remains a fallback for older messages. Task deliveries appear in its chat without starting a model turn.
 See [coordinator quality and economy](coordinator-economy.md) for summaries, batch receipts, memory and usage.
+A message that is a command (`!status`, `!approve BRD-4` …) is run by the board itself and never reaches it
+([commands in the chat](chat-commands.md)).
 
 A board opened from the Coordinator's own pane stays in the repo it was last in: that pane's folder is nobody's repo.
 
