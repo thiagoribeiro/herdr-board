@@ -73,11 +73,14 @@ fn failed_checks_go_back_to_the_agent_with_the_name_and_the_log_and_the_approval
     assert!(!merged(&w));
     let fixed = t.t("prHead");
     assert_ne!(fixed, head);
-    // the old commit's failure says nothing of the repair (#309): gone, and the approval you gave waits for its checks
-    assert_eq!(t.s("stage"), "merging", "{}", t.s("msg")); assert_eq!(t.i("prRounds"), 1); assert!(t.b("mergeIntent"), "the approval you gave carries the repair");
+    // the old commit's failure says nothing of the repair (#309): gone. The repair is a commit you did not approve: it
+    // waits for your yes again, and then for its own checks
+    assert_eq!(t.i("prRounds"), 1); assert!(!t.b("mergeIntent"), "the approval you gave was for the commit before");
     assert!(t.at("prFailure").is_null(), "{}", t.at("prFailure")); assert_ne!(t.s("prState"), "failing");
-    waits(&t, "Waiting for GitHub checks · 0 of 1 passed", "build");
     assert!(sw::land::checks::failed_on(&t).is_none(), "a new commit is not refused for the old one's checks");
+    let t = approve_again(&id, "1 new commit: ");
+    assert_eq!(t.s("stage"), "merging", "{}", t.s("msg"));
+    waits(&t, "Waiting for GitHub checks · 0 of 1 passed", "build");
     w.gh_says(json!({ "origin": origin(&w), "view": failed(&head), "newer": rollup(passed(&head)) }));
     poll_prs();
     let t = settle(&id);
@@ -94,7 +97,8 @@ fn failed_checks_of_an_older_commit_do_not_block_its_repair_that_passed_when_mai
     w.script(json!({ "worker": [{ "files": { "f.txt": "fixed\n" }, "commit": "fix", "note": "Fixed CI." }] }));
     w.gh_says(json!({ "origin": origin(&w), "view": failed(&head), "newer": rollup(running(&head)), "log": LOG }));
     finish_line::approve(&id, None, false).unwrap();
-    let t = settle(&id);
+    settle(&id);
+    let t = approve_again(&id, "1 new commit: ");
     assert_eq!(t.s("stage"), "merging", "{}", t.s("msg")); assert!(t.b("checksWait"));
     let old = sw::land::checks::blocker(t.s("pr"), &head, &["build".into()], "build failed");
     update(&id, |t| { t.put("prFailure", old.clone()); Ok(Change::Write) }).unwrap();
@@ -102,7 +106,9 @@ fn failed_checks_of_an_older_commit_do_not_block_its_repair_that_passed_when_mai
     let main = git(&w.root, &["rev-parse", "HEAD"]);
     w.gh_says(json!({ "origin": origin(&w), "view": failed(&head), "newer": rollup(passed(&head)) }));
     poll_prs();
-    let t = settle(&id);
+    settle(&id);
+    // its merge turn took main in: that commit too is one you did not approve
+    let t = approve_again(&id, "main was merged in; 1 file (other.txt)");
     assert_eq!(t.s("stage"), "done", "{} {}", t.s("msg"), t.at("failure")); assert!(merged(&w)); assert!(t.at("prFailure").is_null());
     let at = gh_log(&w).lines().find(|l| l.starts_with("pr merge")).and_then(|l| l.rsplit(' ').next()).unwrap_or_default().to_string();
     assert!(common::worktrees::git(&w.root, &["merge-base", "--is-ancestor", &main, &at]).is_ok(), "merged with main in: {at}");

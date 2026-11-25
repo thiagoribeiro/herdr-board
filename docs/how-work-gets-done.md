@@ -146,7 +146,7 @@ When the agent's turn ends, the board:
 ## Approving and merging
 
 Your yes makes one last sync with main. If that changed anything, it checks (and reviews, by the same rules) again. Then
-it merges:
+it merges, only if the commit is still the one you approved ([below](#your-yes-is-for-the-commit-you-saw)):
 
 - **through the pull request**, only at the commit that was reviewed. A commit pushed to the pull request meanwhile
   withdraws the approval. On a repo with a merge queue, the task waits until GitHub says the pull request is merged;
@@ -154,8 +154,25 @@ it merges:
   the reviewed commit, built by `merge.method`, never forced and never through your checkout;
 - **or locally**, squashed by default.
 
-A conflict found here goes back to the agent the same way, and the merge you approved is retried after its repair. A
-checkout with unsaved files is never forced. Merging without your yes: [merging by itself](gate.md#merging-by-itself).
+A conflict found here goes back to the agent the same way, and its repair is checked and reviewed. A checkout with
+unsaved files is never forced. Merging without your yes: [merging by itself](gate.md#merging-by-itself).
+
+### Your yes is for the commit you saw
+
+The board records the commit you approved (with `herdr-board approve`, the yes key or the web board: the commit its
+review looked at). If the branch is at any other commit when it would merge, your yes no longer counts: an agent's commit
+after the review, the repair of a conflict or of failed GitHub checks, or main merged in by the last sync. The new commit
+is checked and reviewed by the usual rules, nothing merges, and the task waits for your yes again, saying what changed:
+
+- `Changed since your approval (1a2b3c4 → 5d6e7f8): 1 new commit: 5d6e7f8 Fix the parser; 2 files (src/a.rs, src/b.rs).`
+- `Changed since your approval (1a2b3c4 → 9e8d7c6): only main was merged in; 4 files (…).` A merge of main (or of the
+  branch it started from) that only brings it in keeps its review
+  ([the rule](#a-review-that-passed-is-not-repeated-for-a-merge-of-main)): the check runs on it, and the same message
+  says the review still stands. A clean merge does not prove the result means the same, so you confirm it. A merge of
+  main the rule does not keep the review for is reviewed, and says `main was merged in`.
+
+Approve again and the commit you now see merges. With nothing changed since your yes, it merges at once. A merge the
+board makes by itself (`merge.by itself`) has no yes of yours to lose and goes on as before.
 
 ### Closing GitHub issues
 
@@ -250,14 +267,16 @@ own worktree:
   really land;
 - **whenever main moves** (another task merged, a merge on GitHub, your own push; the remote is asked every two minutes):
   every task waiting for your approval is updated, and a task under review the moment its review ends;
-- **after you approve**, once more, as the last safety net. It should rarely find anything.
+- **after you approve**, once more, as the last safety net. It should rarely find anything; when it merges main in, the
+  task asks for your yes again ([your yes is for the commit you saw](#your-yes-is-for-the-commit-you-saw)).
 
 **Fewer merges while it waits: `merge.sync approve`.** In a busy repo, merging main on every move gives a waiting
 pull request a merge commit, a CI run and a round of bot reviews each time, and only the last merge before landing
 matters. With `herdr-board set merge.sync approve` (for a task, a repo or all), main is merged in before review and
 after your yes only. While the task waits, the board makes a test merge in memory (`git merge-tree`), which changes
 nothing in its worktree, branch or pull request: a conflict is handled as a real one (below), so you know before you
-approve; a clean one changes nothing. After your yes, main is merged, checked again and the work lands, as always.
+approve; a clean one changes nothing. After your yes, main is merged and checked again; if that changed the commit, the
+task asks for your yes to it once more, then lands.
 `always` (built in) is the behaviour described above.
 
 **A clean update is silent.** If it changed the commit, the check runs again on the result. The review is not repeated
