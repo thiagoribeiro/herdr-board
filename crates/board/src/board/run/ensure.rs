@@ -3,7 +3,7 @@
 //! agent anything: herdr only.
 use super::place::{go_to, open_tab, popup_wanted, running};
 use crate::herdr::cli::{current_socket, session_name};
-use crate::herdr::Herdr;
+use crate::herdr::{busy::runs, Herdr};
 use crate::json::*;
 use crate::store::{files::with_lock_wait, settings::lookup::setting};
 use std::time::{Duration, Instant};
@@ -29,21 +29,29 @@ pub fn ensure(socket: &str, focus: bool) -> String {
         let Some(pane) = open_tab(&api) else { return Ok(String::new()) };
         let left: Vec<&Value> = panes.into_iter().filter(|p| api.pane_idle(p.s("pane_id"))).collect();
         // herdr gives the new tab the keyboard: it goes back to the pane that had it, unless the board is to have it.
-        let to = if focus || left.iter().any(|p| p.b("focused")) { Some(&pane) } else { all.iter().find(|p| p.b("focused")) };
+        let to = if focus || left.iter().any(|p| p.b("focused")) { Some(&pane) } else { focused(&all) };
         if let Some(p) = to { go_to(&api, p); }
         for p in left { api.pane_close(p.s("pane_id")); }
         Ok(pane.t("pane_id"))
     }).unwrap_or_default()
 }
 /// Does the board run in this pane: its program, or bin/run.sh still starting it? Unknown: yes, so none opens twice.
-fn runs_board(api: &Herdr, pane: &str) -> bool {
-    api.process_info(pane).map(|i| i.arr("foreground_processes").iter().any(|f| f.s("name").starts_with("herdr-board") || f.s("cmdline").contains("run.sh"))).unwrap_or(true)
+fn runs_board(api: &Herdr, pane: &str) -> bool { runs(api, pane, |f| f.s("name").starts_with("herdr-board") || f.s("cmdline").contains("run.sh")).unwrap_or(true) }
+fn focused(all: &[Value]) -> Option<&Value> { all.iter().find(|p| p.b("focused")) }
+/// The pane that has the keyboard and what it shows. Keys typed there echo on its screen, so two looks that differ say
+/// someone is at work there (or moved, or a program in it writes): no keyboard is taken then. None: herdr did not say.
+pub fn look(api: &Herdr) -> Option<(String, String)> {
+    let all = api.panes(None).ok()?;
+    let id = focused(&all)?.t("pane_id");
+    let screen = api.pane_read(&id, "visible", None).ok()?;
+    Some((id, screen))
 }
 
 /// `herdr-board ensure-open`, which herdr's startup hook starts detached so herdr's start waits for nothing: herdr's
 /// socket and its first space are waited for (a minute at most: a server no client has attached to has none), and a
 /// board herdr restores is given a moment to come up. The keyboard goes to a new board only with
-/// `board.focusOnStartup`, when herdr answered at once (a fresh start) and nobody moved it meanwhile.
+/// `board.focusOnStartup`, when herdr answered at once (a start, a restored session too) and the pane that has the
+/// keyboard stayed as it was, looked at every quarter second while the board waited: nobody moved nor typed there.
 pub fn at_startup() -> i32 {
     let socket = current_socket();
     let api = Herdr::new(Some(socket.clone()));
@@ -52,10 +60,8 @@ pub fn at_startup() -> i32 {
         if start.elapsed() > Duration::from_secs(60) { return 1; }
         std::thread::sleep(Duration::from_millis(250));
     }
-    let focused = || api.panes(None).unwrap_or_default().into_iter().find(|p| p.b("focused")).map(|p| p.t("pane_id"));
-    let before = focused();
-    std::thread::sleep(Duration::from_millis(1500));
-    let calm = start.elapsed() < Duration::from_secs(10) && focused() == before;
+    let before = look(&api);
+    let calm = before.is_some() && (0..6).all(|_| { std::thread::sleep(Duration::from_millis(250)); look(&api) == before }) && start.elapsed() < Duration::from_secs(10);
     ensure(&socket, calm && setting("board.focusOnStartup", None) == json!(true));
     0
 }

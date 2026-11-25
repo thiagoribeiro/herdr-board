@@ -4,7 +4,7 @@
 use crate::common;
 use common::*;
 use serde_json::json;
-use sw::board::run::ensure::{ensure, PANE_LABEL};
+use sw::board::run::ensure::{ensure, look, PANE_LABEL};
 use sw::json::*;
 
 fn boards(w: &World) -> Vec<String> { w.state().arr("panes").iter().filter(|p| p.s("label") == PANE_LABEL).map(|p| p.t("pane_id")).collect() }
@@ -94,4 +94,19 @@ fn with_the_popup_chosen_herdrs_start_opens_nothing_the_popup_is_the_keys_only()
     assert_eq!(ensure(&w.socket, true), "");
     assert!(boards(&w).is_empty());
     assert!(w.state().at("boardPlacement").is_null(), "no popup either");
+}
+
+#[test]
+fn the_keyboard_is_taken_only_while_the_pane_that_has_it_stays_as_it_was_typing_there_or_moving_shows() {
+    let w = world();
+    herdr(&w);
+    let api = sw::herdr::Herdr::new(Some(w.socket.clone()));
+    w.patch(|s| s["panes"][0]["screen"] = json!("$ "));
+    let before = look(&api);
+    assert_eq!(before, Some(("w1:p1".to_string(), "$ ".to_string())));
+    assert_eq!(look(&api), before, "nobody there: the same");
+    w.patch(|s| s["panes"][0]["screen"] = json!("$ echo typ"));
+    assert_ne!(look(&api), before, "keys typed echo on its screen");
+    w.patch(|s| { s["panes"][0]["screen"] = json!("$ "); s["panes"][0]["focused"] = json!(false); });
+    assert_eq!(look(&api), None, "herdr names no pane with the keyboard: nothing to go by, so none is taken");
 }

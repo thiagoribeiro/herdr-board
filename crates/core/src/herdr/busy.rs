@@ -53,6 +53,9 @@ pub fn beside_agent(api: &Herdr, id: &str, agent: &str, all: bool) -> Vec<String
     if crate::gate::is_int(i.at("shell_pid")) { out.extend(shell_jobs(i.i("shell_pid"), &front, all)); }
     out
 }
+/// Does a process in the pane's foreground answer `is` (a process as herdr lists it: name, argv, cmdline)? None: herdr
+/// does not say.
+pub fn runs(api: &Herdr, id: &str, is: impl Fn(&Value) -> bool) -> Option<bool> { api.process_info(id).map(|i| i.arr("foreground_processes").iter().any(is)) }
 /// What runs in the pane beside its shell.
 pub fn beside_shell(api: &Herdr, id: &str, all: bool) -> Vec<String> {
     let Some(i) = api.process_info(id) else { return vec![UNSAID.into()] };

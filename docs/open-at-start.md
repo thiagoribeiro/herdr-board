@@ -20,9 +20,13 @@ all, and it asks no agent anything: only herdr.
 
 ## Who gets the keyboard
 
-**Only a board it opened itself, at a fresh start, and only when you did not move meanwhile.** With
-`board.focusOnStartup` on (the default), a new board takes the keyboard when herdr answered at once and the focused
-pane stayed the same while the board waited. A board that was there already (herdr kept or brought it back: a reload,
+**Only a board it opened itself, at herdr's start, and only when you are not at work elsewhere.** With
+`board.focusOnStartup` on (the default), a new board takes the keyboard when herdr answered at once and the pane that
+has the keyboard stayed as it was while the board waited: looked at every quarter second for a second and a half, the
+same pane with the same screen. Keys you type echo on that screen, so while you type (or move, or a program in that
+pane writes) the board opens behind and your keys stay where they go. A session herdr restores after a restart or a
+crash is a start too: herdr puts the keyboard back on the tab you were on, and the new board takes it from there when
+you are not typing in it. A board that was there already (herdr kept or brought it back: a reload,
 a handoff) stays as it is, and so does the keyboard. With `board.focusOnStartup` off, the board opens behind: herdr
 gives a new tab the keyboard, and it goes back to the pane that had it. Except where it was on the shell herdr brought
 back in the board's place: there the new board takes it, as that shell goes.
