@@ -219,6 +219,7 @@
    alt+a        show the archive
    alt+s        group by repo: see which repo each task is in
    alt+d        show all done
+   alt+g        its change in your diff tool, beside the board
    alt+m        look for other machines (now: this machine)
 
  on a row
@@ -235,8 +236,7 @@
    ○            to do
    ⟳            an automation (dimmed while it is off; the word after it says on or off)
    65% 2m left  how far it is, and the time left; the time after it is how long it has worked, or how long ago it stopped
-   R#2          the review it is on or last had, coloured by where it stands: passed, failed, the reviewer working
- ↓ 4 more
+ ↓ 5 more
 
 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 ❯ Add a task

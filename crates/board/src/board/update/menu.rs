@@ -31,6 +31,7 @@ pub fn label(s: &State, k: K, r: Option<&Obj>) -> String {
         },
         K::Pin => super::pinned::menu_label(s, r),
         K::OpenLink => r.and_then(super::link::of).map(|(what, _)| format!("open its {what} in the browser")).unwrap_or_default(),
+        K::Diff => if r.is_some() { "its change in your diff tool, beside the board".into() } else { String::new() },
         K::Settings => match (&s.editing, r) {
             (Some(e), _) if e.whose.mine() => "back from your settings".into(),
             (Some(_), _) => "back from this task's settings".into(),

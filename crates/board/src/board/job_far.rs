@@ -87,7 +87,7 @@ pub fn coord_open(to: &str, name: &str, popup: bool) -> Done {
         let args = vec![format!("HERDR_SOCKET_PATH={}", co.socket), crate::herdr::cli::bin(), "agent".into(), "attach".into(), v.pane];
         return Done::default().and(Then::Attach { command: "env".into(), args, id: String::new() });
     }
-    match crate::coordinator::look::go_in(&co, 30000) { Ok(_) => if popup { Done::default().and(Then::Leave) } else { Done::default() }, Err(e) => Done::fail(e.msg) }
+    match crate::coordinator::look::go_in(&co, 30000) { Ok(_) => if popup { Done::default().and(Then::Leave("the agent")) } else { Done::default() }, Err(e) => Done::fail(e.msg) }
 }
 /// A setting of one task (or automation) from the settings page: a value, or none to put the row back. Yours and your
 /// entry for a repo are changed as `set` and `set --repo` change them, with the same checks.
@@ -150,7 +150,7 @@ pub fn open_agent(id: &str, popup: bool) -> Done {
         return Done::default().and(Then::Attach { command: "env".into(), args, id: id.into() });
     }
     if let Err(e) = crate::delegate::jobs::bring_forward(&api, &pane, has_agent) { return Done::fail(e.message); } // herdr refused: the board stays as it is and says why
-    Done::default().and(if popup { Then::Leave } else { Then::Opened(id.into()) })
+    Done::default().and(if popup { Then::Leave("the agent") } else { Then::Opened(id.into()) })
 }
 /// The first run's answers, each saved as soon as it is settled, so one that herdr refuses is the only one asked again.
 pub fn setup(key: Option<String>, sidebar: Option<bool>, file: &str) -> Done {

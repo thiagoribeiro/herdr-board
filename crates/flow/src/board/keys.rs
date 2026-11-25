@@ -19,7 +19,7 @@ use std::cell::Cell;
 /// The groups, in the order the ? menu and docs/keys.md show them.
 pub const GROUPS: [(&str, &str); 3] = [("plain", "plain keys"), ("ctrl", "ctrl: does something"), ("alt", "alt: only shows or hides")];
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub enum K { Up, Down, Fold, Unfold, Open, PageUp, PageDown, Filter, Pilot, Enter, Newline, Talk, Delegate, Back, Menu, SayYes, SayNo, Yes, SendBack, NextAttempt, NextNeeds, Stop, Archive, Pin, OpenLink, Settings, PutBack, Undo, Find, Free, Close, Call, ChatMessage, ChatScrollUp, ChatScrollDown, Side, Panel, ArchiveView, ByRepo, AllDone, Scope }
+pub enum K { Up, Down, Fold, Unfold, Open, PageUp, PageDown, Filter, Pilot, Enter, Newline, Talk, Delegate, Back, Menu, SayYes, SayNo, Yes, SendBack, NextAttempt, NextNeeds, Stop, Archive, Pin, OpenLink, Diff, Settings, PutBack, Undo, Find, Free, Close, Call, ChatMessage, ChatScrollUp, ChatScrollDown, Side, Panel, ArchiveView, ByRepo, AllDone, Scope }
 pub struct Key {
     pub id: K, pub name: &'static str, pub keys: &'static [&'static str], pub raw: &'static [&'static str], pub show: Option<&'static str>, pub gap: Option<&'static str>,
     pub group: Option<&'static str>, pub with: Option<&'static str>, pub fixed: bool, pub draft: bool, pub web: Option<&'static str>, pub help: Option<&'static str>,
@@ -106,6 +106,8 @@ pub static KEYS: &[Key] = &[
         doc: Some("every done task, or none: the list then counts them on one line") },
     Key { id: K::Open, name: "open", keys: &["alt+o"], raw: &[], show: None, gap: None, group: Some("alt"), with: None, fixed: false, draft: false, web: Some("Open agent"), help: Some("go into this row's agent: a task's, or a machine's or a project's coordinator"), hint: Some("open this task's agent"),
         doc: Some("go into the selected row's agent: its real herdr pane. On a task's row its agent; on a machine's or a project's row (or All machines) its coordinator, started first when it is not running, on another machine there. The board keeps running in its own tab and is there as you left it; your key goes back to it (as a popup it closes, and your key opens it again where it was). On a status group's heading there is none ([machine-and-project-coordinators.md](machine-and-project-coordinators.md))") },
+    Key { id: K::Diff, name: "diff", keys: &["alt+g"], raw: &[], show: None, gap: None, group: Some("alt"), with: None, fixed: false, draft: false, web: None, help: None, hint: None,
+        doc: Some("the selected task's change in your own diff tool (`board.diffTool`, plain `git diff` in `less` unless you set one; against where the task left main, or since your approval when that approval lapsed): a herdr pane beside the board, in the task's folder. Quitting the tool closes the pane and you are back on the board. Only a task of this machine, in herdr ([diff-tool.md](diff-tool.md))") },
     Key { id: K::Scope, name: "scope", keys: &["alt+m"], raw: &[], show: None, gap: None, group: Some("alt"), with: None, fixed: false, draft: false, web: Some("Other machines"), help: None, hint: None,
         doc: Some("whose board shows, the filter row's first item: every machine, then each machine by itself (this one too) in the order of herdr's sidebar") },
 ];
