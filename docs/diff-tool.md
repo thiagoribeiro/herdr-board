@@ -6,7 +6,7 @@ closes: you are back on the board, where you were.
 
 ## What it runs
 
-The setting `review.tool` (yours, as `board.*` settings are) is the command. Built in it is `git diff {from}`.
+The setting `board.diffTool` (yours only, as every `board.*` setting) is the command. Built in it is `git diff {from}`.
 `{from}` is the commit to compare with:
 
 - **since your approval**: the commit you last said yes to (`Ctrl+L`), when the branch moved on since. An approved
@@ -17,9 +17,9 @@ The setting `review.tool` (yours, as `board.*` settings are) is the command. Bui
 Some choices:
 
 ```
-herdr-board set review.tool lazygit
-herdr-board set review.tool 'git diff {from} | delta'
-herdr-board set review.tool 'nvim -c "DiffviewOpen {from}"'
+herdr-board set board.diffTool lazygit
+herdr-board set board.diffTool 'git diff {from} | delta'
+herdr-board set board.diffTool 'nvim -c "DiffviewOpen {from}"'
 ```
 
 A command without `{from}` runs as it is. The pane runs it at its own shell with `; exit` after it, so a tool that

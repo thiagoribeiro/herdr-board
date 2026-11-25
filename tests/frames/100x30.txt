@@ -116,7 +116,7 @@
    ctrl+p       pin this task: a mark on its row, and under Pinned
    ctrl+e       this task's settings: see and change each one
                 your own settings: what every task starts from
- ↓ 38 more
+ ↓ 39 more
 
 ────────────────────────────────────────────────────────────────────────────────────────────────────
 ❯ Add a task

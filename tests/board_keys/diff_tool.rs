@@ -1,4 +1,4 @@
-//! The diff key: a task's change in your diff tool (`review.tool`), in a herdr pane split off the board's, in the task's
+//! The diff key: a task's change in your diff tool (`board.diffTool`), in a herdr pane split off the board's, in the task's
 //! folder, with `exit` after it so the pane closes when the tool ends; against where it left main, and since your
 //! approval once the branch moved on from the commit you approved.
 use crate::common;
@@ -38,9 +38,9 @@ fn the_key_runs_your_diff_tool_beside_the_board_against_main_then_since_your_app
     commit(&w, "b.txt");
     assert_eq!(command(&task(&id)).unwrap(), format!("git diff {done}"));
     // Your own tool, with or without the commit.
-    sw::store::settings::change::set_value("review.tool", &json!("git diff {from} | delta"), &sw::store::settings::lookup::Scope::you()).unwrap();
+    sw::store::settings::change::set_value("board.diffTool", &json!("git diff {from} | delta"), &sw::store::settings::lookup::Scope::you()).unwrap();
     assert_eq!(command(&task(&id)).unwrap(), format!("git diff {done} | delta"));
-    sw::store::settings::change::set_value("review.tool", &json!("lazygit"), &sw::store::settings::lookup::Scope::you()).unwrap();
+    sw::store::settings::change::set_value("board.diffTool", &json!("lazygit"), &sw::store::settings::lookup::Scope::you()).unwrap();
     assert_eq!(command(&task(&id)).unwrap(), "lazygit");
 }
 

@@ -1,4 +1,4 @@
-//! The key that shows a task's change in your own diff tool (`review.tool`): a herdr pane split off beside the board,
+//! The key that shows a task's change in your own diff tool (`board.diffTool`): a herdr pane split off beside the board,
 //! in the task's folder, that runs the tool and closes when it ends, so quitting it is back on the board.
 use super::Effect;
 use crate::board::job::{Done, Job, Then};
@@ -14,7 +14,7 @@ pub fn key(s: &mut State, r: &Obj, fx: &mut Vec<Effect>) {
     if s.ctx.web || r.b("host") || beside.is_empty() { return s.flash("A task's change opens in a herdr pane beside the board, on the machine it runs on: open the board there, in herdr.", Ink::Muted); }
     fx.push(Effect::Run(Job::Diff { id: r.t("id"), beside, popup: s.ctx.popup }));
 }
-/// The command the pane runs: `review.tool` with `{from}` the commit you last approved when the branch moved on since,
+/// The command the pane runs: `board.diffTool` with `{from}` the commit you last approved when the branch moved on since,
 /// else where the task left main. None: its folder has no commit to compare.
 pub fn command(t: &Obj) -> Option<String> {
     let dir = cwd_of(t);
@@ -24,7 +24,7 @@ pub fn command(t: &Obj) -> Option<String> {
         let base = crate::plan::untouched::base_of(t);
         git_out(&dir, &["merge-base", "HEAD", if base.is_empty() { "HEAD" } else { &base }]).ok()?
     };
-    Some(crate::store::settings::lookup::setting("review.tool", None).as_str().unwrap_or_default().replace("{from}", &from))
+    Some(crate::store::settings::lookup::setting("board.diffTool", None).as_str().unwrap_or_default().replace("{from}", &from))
 }
 /// The job: the pane, the tool typed at its shell with `exit` after it, and the keyboard on it.
 pub fn open_pane(id: &str, beside: &str, popup: bool) -> Done {

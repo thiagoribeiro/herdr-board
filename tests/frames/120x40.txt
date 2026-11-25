@@ -156,7 +156,7 @@
    alt+j        scroll the chat's message down
    alt+p        show the side panel: this task, beside the list
    alt+t        show the whole task, full screen
- ↓ 25 more
+ ↓ 26 more
 
 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 ❯ Add a task
