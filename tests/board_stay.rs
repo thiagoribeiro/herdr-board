@@ -10,6 +10,8 @@ use sw::board::keys::Press;
 use sw::board::state::{Ctx, State};
 use sw::board::update::{list::relist, update, Effect, Event};
 use sw::json::*;
+/// The board opened at herdr's start, once (ensure-open).
+mod open_at_start;
 
 fn has(text: &str, re: &str) -> bool { regex::Regex::new(re).unwrap().is_match(text) }
 fn focus(w: &World) -> Vec<String> { w.state().arr("focus").iter().map(text).collect() }

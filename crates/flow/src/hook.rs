@@ -18,6 +18,7 @@ use crate::herdr::{cli::{current_socket, same_socket}, Herdr};
 use crate::json::*;
 use crate::limits::run::granted;
 use crate::runner::{runner_alive, spawn_runner};
+use crate::store::settings::lookup::setting;
 use crate::store::{failures::failure_patch, files::{data_dir, has_tasks}, handovers::fresh_list, inbox::{pending_text, take_text, untake_text}, repos::cwd_of, tasks::{get, list, update_wait, Change, ListOpts, Task}};
 use crate::submit::{hand, not_started, note_sent, rest, took, unconfirmed::taken};
 use std::path::Path;
@@ -33,6 +34,8 @@ pub fn hook_main() {
     if event == "startup" {
         crate::webui::keep::ensure_door(); // the board in the herdr web UI starts with herdr
         crate::extras::sync_skill(); crate::extras::remove_popups(); crate::extras::refresh_sidebar();
+        // The board open, with no tasks too, by a process of its own that waits for herdr (board/run/ensure.rs).
+        if !crate::runner::inline() && setting("board.openOnStartup", None) == json!(true) { crate::housekeeping::spawn_loose(&["ensure-open"]); }
     }
     if !has_tasks() { return; } // nothing of ours anywhere: do nothing, in any herdr session
     let socket = current_socket();
