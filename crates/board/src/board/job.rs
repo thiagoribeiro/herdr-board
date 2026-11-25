@@ -100,8 +100,8 @@ pub enum Then {
     Left(String),
     /// Nothing was sent: the words go back into the box, or are put away when the box has others by now.
     Unsent { text: String, to: String },
-    /// The board is in herdr's popup and an agent was opened: it closes.
-    Leave,
+    /// The board is in herdr's popup and something was opened (what, said as it closes: "the agent"): it closes.
+    Leave(&'static str),
     /// This terminal becomes the agent's until you detach (outside a herdr client, or another machine's agent on an
     /// older plugin).
     Attach { command: String, args: Vec<String>, id: String },
@@ -226,7 +226,7 @@ fn run_one(job: Job) -> Done {
                 Ok(()) => Done::default(),
                 Err(why) => Done::say(format!("Nothing opens its {what} here ({why}): copied the link instead. {link}"), Ink::Yellow).and(Then::Copy(link)),
             },
-            Job::Diff { id, beside, popup } => super::update::diff::open_pane(&id, &beside, popup),
+            Job::Diff { id, beside, popup } => super::job_diff::open_pane(&id, &beside, popup),
             Job::FreeSize { pids } => {
                 let ended = pids.iter().filter(|p| unsafe { libc::kill(**p as i32, libc::SIGTERM) } == 0).count();
                 if ended > 0 { Done::say(format!("Ended {}. The board has its own size again in a moment.", if ended == 1 { "the remote view of this pane".to_string() } else { format!("{ended} remote views of this pane") }), Ink::Green) }

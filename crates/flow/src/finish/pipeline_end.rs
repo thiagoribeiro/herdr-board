@@ -147,11 +147,13 @@ pub fn after_review(c: Ctx, g: &mut Guard) -> Res<()> {
         // checked and reviewed (or its review kept), with what changed since. The board's own merge has no yes to lose.
         let lapsed = if t.at("mergeIntent").b("auto") { None } else { super::approved_head::changed_since(&t, c.tree, &head, review.as_ref()) };
         let stat = change.as_ref().map(|x| x.at("stat").clone()).unwrap_or(Value::Null);
+        let approved = t.at("mergeIntent").at("verifiedHead").clone(); // read before it moves on to the new commit
         t = g.set(|t| { t.put("review", review.clone().unwrap_or(Value::Null)); t.put("stat", stat.clone()); t.put("reviewedHead", head_v.clone()); t.obj_mut("mergeIntent").put("verifiedHead", head_v.clone()); })?;
         // A blocked pull request's failure of an older commit is cleared first; one that holds stays on the task, but
         // the approval that lapsed is what the task waits for and says.
         let held = hold_pr_failure(g, &mut t)?;
-        if let Some(what) = lapsed { flow::sidebar::tell_sidebar(&g.set(|t| back_to_you(t, &format!(" {what}")))?); return Ok(()); }
+        // The commit you approved is kept, as the merge intent goes: the diff key shows what changed since (board/job_diff.rs).
+        if let Some(what) = lapsed { flow::sidebar::tell_sidebar(&g.set(|t| { back_to_you(t, &format!(" {what}")); t.put("lapsedApproval", approved.clone()); })?); return Ok(()); }
         if held { return Ok(()); }
         g.set(|t| { t.put("stage", "merging"); t.put("msg", "Merging"); })?;
         return crate::land::land_core(id, g);
