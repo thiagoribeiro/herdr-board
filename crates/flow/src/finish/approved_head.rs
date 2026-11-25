@@ -2,12 +2,13 @@
 //! comes back to you instead of landing a commit you never saw (finish/pipeline_end.rs).
 use crate::json::*;
 use crate::store::repos::git_out;
-use crate::sync::merge_only::merge_only;
+use crate::sync::{main_word, merge_only::merge_only};
 use std::path::Path;
 
-/// None: `head` is the commit you approved (or none was recorded), and your yes stands. Else what changed since, ending
-/// in what to do. `main`: the commit of main last merged in, so that main's own commits are not counted as the task's.
-pub fn changed_since(tree: &str, approved: &str, head: &str, main: &str) -> Option<String> {
+/// None: `head` is the commit you approved (its `mergeIntent`'s, or none was recorded), and your yes stands. Else what
+/// changed since, ending in what to do. Main's own commits (up to the one last merged in) are not counted as the task's.
+pub fn changed_since(t: &Obj, tree: &str, head: &str) -> Option<String> {
+    let (approved, main) = (t.at("mergeIntent").s("verifiedHead"), t.s("syncedTo"));
     if tree.is_empty() || approved.is_empty() || head.is_empty() || approved == head { return None; }
     let dir = Path::new(tree);
     let lines = |args: &[&str]| -> Vec<String> { git_out(dir, args).unwrap_or_default().lines().map(String::from).collect() };
@@ -15,8 +16,8 @@ pub fn changed_since(tree: &str, approved: &str, head: &str, main: &str) -> Opti
     let files = lines(&["diff", "--name-only", approved, head]);
     let only_main = merge_only(tree, approved, main);
     let what = if only_main.b("ok") {
-        let resolved = only_main.arr("resolved").len();
-        format!("only main was merged in ({} of main{})", many(lines(&["rev-list", "--no-merges", &range]).len(), "commit"),
+        let (resolved, base) = (only_main.arr("resolved").len(), main_word(t));
+        format!("only {base} was merged in ({} of {base}{})", many(lines(&["rev-list", "--no-merges", &range]).len(), "commit"),
             if resolved > 0 { format!(", conflicts resolved in {}", many(resolved, "file")) } else { String::new() })
     } else {
         let mut args = vec!["log", "--no-merges", "--format=%h %s", range.as_str()];

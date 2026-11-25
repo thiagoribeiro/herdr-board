@@ -145,7 +145,7 @@ pub fn after_review(c: Ctx, g: &mut Guard) -> Res<()> {
         }
         // Your yes is for the commit you approved: any other one (a new commit, main merged in) comes back to you,
         // checked and reviewed (or its review kept), with what changed since. The board's own merge has no yes to lose.
-        let lapsed = if t.at("mergeIntent").b("auto") { None } else { super::approved_head::changed_since(c.tree, t.at("mergeIntent").s("verifiedHead"), &head, t.s("syncedTo")) };
+        let lapsed = if t.at("mergeIntent").b("auto") { None } else { super::approved_head::changed_since(&t, c.tree, &head) };
         let stat = change.as_ref().map(|x| x.at("stat").clone()).unwrap_or(Value::Null);
         t = g.set(|t| { t.put("review", review.clone().unwrap_or(Value::Null)); t.put("stat", stat.clone()); t.put("reviewedHead", head_v.clone()); if lapsed.is_none() { t.obj_mut("mergeIntent").put("verifiedHead", head_v.clone()); } })?;
         if hold_pr_failure(g, &mut t)? { return Ok(()); }

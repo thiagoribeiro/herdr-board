@@ -166,7 +166,7 @@ is checked and reviewed by the usual rules, nothing merges, and the task waits f
 
 - `Changed since your approval (1a2b3c4 → 5d6e7f8): 1 new commit: 5d6e7f8 Fix the parser; 2 files (src/a.rs, src/b.rs).`
 - `Changed since your approval (1a2b3c4 → 9e8d7c6): only main was merged in (3 commits of main); 4 files (…).` A merge
-  of main that only brings main in ([the rule](#a-review-that-passed-is-not-repeated-for-a-merge-of-main)) keeps its
+  of main (or of the branch it started from) that only brings it in ([the rule](#a-review-that-passed-is-not-repeated-for-a-merge-of-main)) keeps its
   review, and the check runs on it; a clean merge does not prove the result means the same, so you confirm it.
 
 Approve again and the commit you now see merges. With nothing changed since your yes, it merges at once. A merge the

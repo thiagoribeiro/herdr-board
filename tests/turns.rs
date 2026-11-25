@@ -21,9 +21,11 @@ fn approve_refuses_to_merge_work_that_changed_after_its_review_the_finish_line_r
     let t = task(&id);
     std::fs::write(std::path::Path::new(t.s("worktree")).join("extra.txt"), "late\n").unwrap(); // dirty tree behind the approval, no herdr event
     sw::actions::finish_line::approve(&id, None, false).unwrap();
-    let t = settle(&id);
+    settle(&id);
+    assert!(!w.root.join("extra.txt").exists(), "not merged under a yes given to the commit before");
+    let t = approve_again(&id, "1 file (extra.txt)");
     assert_eq!(t.s("stage"), "done", "{}", t.at("failure"));
-    assert_eq!(read(&w.root.join("extra.txt")), "late\n"); // committed, re-reviewed, then merged
+    assert_eq!(read(&w.root.join("extra.txt")), "late\n"); // committed, re-reviewed, approved again, then merged
 }
 
 #[test]
