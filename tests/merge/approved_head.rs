@@ -54,7 +54,7 @@ fn main_merged_in_after_your_yes_keeps_its_review_and_is_shown_as_only_main_and_
     finish_line::approve(&id, None, false).unwrap();
     settle(&id);
     let t = back_to_you(&w, &id, &approved);
-    assert!(t.s("msg").contains("only main was merged in (1 commit of main); 1 file (g.txt)."), "{}", t.s("msg"));
+    assert!(t.s("msg").contains("only main was merged in; 1 file (g.txt)."), "{}", t.s("msg"));
     // the gate that keeps a review after a clean merge of main still does: the check runs, the review is not repeated
     assert!(t.s("msg").contains("review 1 still stands"), "{}", t.s("msg"));
     assert!(t.at("review").b("keptAt")); assert_eq!((checks(&w), review_history(&t).len()), (2, 1));

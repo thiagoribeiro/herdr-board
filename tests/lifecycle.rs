@@ -78,7 +78,7 @@ fn a_merge_conflict_is_rolled_back_sent_to_the_agent_and_lands_after_repair() {
     assert!(prompts(&w, t.at("link").s("pane")).last().unwrap().contains("already approved this merge"));
     settle(&id);
     // the repair is a commit you did not approve: shown as main merged in, it waits for your yes again
-    let mut t = approve_again(&id, "only main was merged in (1 commit of main, conflicts resolved in 1 file)");
+    let mut t = approve_again(&id, "main was merged in; 1 file (a.txt)");
     for _ in 0..2 { if t.s("stage") != "done" { t = settle(&id); } }
     assert_eq!(t.s("stage"), "done", "{} {}", t.s("msg"), t.at("failure"));
     assert!(t.i("mergedAt") >= t.i("created"));

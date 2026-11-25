@@ -127,7 +127,7 @@ fn a_branch_that_moved_after_the_review_is_caught_up_with_checked_again_and_noth
     assert_eq!(checks(&w), 1);
     let theirs = they_push(&w, "develop", "e.txt", "theirs\n");
     approved(&id);
-    let t = approve_again(&id, "only develop was merged in (1 commit of develop); 1 file (e.txt)");
+    let t = approve_again(&id, "develop was merged in; 1 file (e.txt)");
     assert_eq!(t.s("stage"), "done", "{}", t.at("failure"));
     assert_eq!(checks(&w), 2, "checked again with their work in");
     assert_eq!(git(&bare(&w), &["rev-parse", "develop^"]), theirs, "on top of theirs");
@@ -149,7 +149,7 @@ fn a_branch_that_moved_while_it_was_pushed_is_refused_by_git_then_caught_up_with
     let once = w.base.join("raced");
     hook(&w.root.join(".git"), "pre-push", &format!("[ -e '{}' ] && exit 0\ntouch '{}'\nunset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE\ngit -C '{}' push -q origin develop\n", once.display(), once.display(), racer.display()));
     approved(&id);
-    let t = approve_again(&id, "only develop was merged in (1 commit of develop); 1 file (r.txt)");
+    let t = approve_again(&id, "develop was merged in; 1 file (r.txt)");
     assert_eq!(t.s("stage"), "done", "{}", t.at("failure"));
     assert!(once.exists(), "the race happened");
     assert_eq!(checks(&w), 2, "checked again with their work in");

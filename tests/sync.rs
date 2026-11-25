@@ -184,7 +184,7 @@ fn with_approve_main_is_merged_and_checked_after_your_yes_and_the_work_lands() {
     finish_line::approve(&id, None, false).unwrap();
     settle(&id);
     assert_eq!(checks(&w), 2, "the branch with main merged in is checked before it comes back to you");
-    let t = approve_again(&id, "only main was merged in (1 commit of main); 1 file (g.txt)");
+    let t = approve_again(&id, "main was merged in; 1 file (g.txt)");
     assert_eq!(t.s("stage"), "done", "{}", t.at("failure"));
     assert_eq!(checks(&w), 2, "and lands as it was checked");
     assert!(holds(&w.root, &target)); assert_eq!(read(&w.root.join("f.txt")), "v1\n"); assert_eq!(read(&w.root.join("g.txt")), "from main\n");

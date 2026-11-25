@@ -108,7 +108,7 @@ fn failed_checks_of_an_older_commit_do_not_block_its_repair_that_passed_when_mai
     poll_prs();
     settle(&id);
     // its merge turn took main in: that commit too is one you did not approve
-    let t = approve_again(&id, "only main was merged in (1 commit of main); 1 file (other.txt)");
+    let t = approve_again(&id, "main was merged in; 1 file (other.txt)");
     assert_eq!(t.s("stage"), "done", "{} {}", t.s("msg"), t.at("failure")); assert!(merged(&w)); assert!(t.at("prFailure").is_null());
     let at = gh_log(&w).lines().find(|l| l.starts_with("pr merge")).and_then(|l| l.rsplit(' ').next()).unwrap_or_default().to_string();
     assert!(common::worktrees::git(&w.root, &["merge-base", "--is-ancestor", &main, &at]).is_ok(), "merged with main in: {at}");
