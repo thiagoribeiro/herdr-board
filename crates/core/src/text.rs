@@ -4,6 +4,8 @@
 use unicode_segmentation::UnicodeSegmentation;
 use unicode_width::UnicodeWidthStr;
 
+/// The words with their first letter in capitals: "asks you" is "Asks you".
+pub fn capital(s: &str) -> String { let mut c = s.chars(); c.next().map(|f| f.to_uppercase().chain(c).collect()).unwrap_or_default() }
 /// The cells one written character takes.
 pub fn grapheme_width(g: &str) -> usize {
     if g.is_ascii() { return usize::from(!g.is_empty()); }

@@ -113,14 +113,14 @@
 ▌           removed, or kept for one more version s…  1m ago
    @ #10    Max length for task titles
             Needs a login                             1m ago
-   ! #12    Max length for task titles
-            The pull request's checks fail
-                                      R#1 PR#123456   1m ago
- ↓ 15 more
+
+ ↓ 16 more
 
 ╭─ this machine › proj ›  #9  · Agent ─────────────────────╮
+│                                                          │
+│  The agent has said nothing yet.                         │
 │                                                          │
 │  ❯ Keep                                                  │
 │                                                          │
 ╰──────────────────────────────────────────────────────────╯
-  enter add to #9's description · esc put away
+  enter send to #9's agent · esc put away

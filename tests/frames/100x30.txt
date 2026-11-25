@@ -174,13 +174,13 @@
    ▾ working
    ◐ #2     Max length for task titles                              40% 90m left                  1m
             Drafting
-   ◇ #4     Max length for task titles                                                            1m
-            Starting
- ↓ 10 more
+ ↓ 11 more
 
 ╭─ this machine › proj ›  #9  · Agent ─────────────────────────────────────────────────────────────╮
+│                                                                                                  │
+│  The agent has said nothing yet.                                                                 │
 │                                                                                                  │
 │  ❯ Keep                                                                                          │
 │                                                                                                  │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
-  enter add to #9's description · shift+enter new line · esc put away
+  enter send to #9's agent · shift+enter new line · esc put away

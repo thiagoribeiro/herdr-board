@@ -91,12 +91,12 @@
 ▌ ? #9     Max length for task titles
 ▌          Asks you · Should the old
 ▌          settings file be rem…  1m ago
-  @ #10    Max length for task titles
-           Needs a login          1m ago
 
 ╭─ this machine › proj ›  #9  · Agent ─╮
+│                                      │
+│  The agent has said nothing yet.     │
 │                                      │
 │  ❯ Keep                              │
 │                                      │
 ╰──────────────────────────────────────╯
-  enter add to #9's description
+  enter send to #9's agent

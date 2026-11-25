@@ -142,7 +142,7 @@ pub fn yes(s: &mut State, r: &Obj, fx: &mut Vec<Effect>) {
         let seen = (r.at("pr").clone(), r.at("reviewedHead").clone());
         let job = if r.b("host") { far(s, r, "approve", json!({ "seen": [seen.0, seen.1], "anyway": failed }), false) } else { Job::Approve { id: id.clone(), seen: Some(seen), anyway: failed } };
         let mark = merge_mark(s, &id);
-        let detail = format!("{}{}A merge cannot be undone.", if bad_review { format!("Its last review failed{}. ", if tally.is_empty() { String::new() } else { format!(": {tally}") }) } else { String::new() }, checks.map(|c| format!("{}{}. ", c[..1].to_uppercase(), &c[1..])).unwrap_or_default());
+        let detail = format!("{}{}A merge cannot be undone.", if bad_review { format!("Its last review failed{}. ", if tally.is_empty() { String::new() } else { format!(": {tally}") }) } else { String::new() }, checks.map(|c| format!("{}. ", crate::text::capital(&c))).unwrap_or_default());
         return confirm(s, format!("Merge {what}{} into {onto}?", if pr.is_empty() { String::new() } else { format!(" ({pr})") }), job, Valid::Mark(id, mark),
             vec![("sayYes", if failed { "merge anyway" } else { "merge" }.into()), ("sayNo", "do not merge".into())], detail, true);
     }

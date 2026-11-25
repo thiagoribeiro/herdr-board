@@ -167,7 +167,7 @@ herdr-board set board.keys "chatMessage=ctrl+g, chatScrollUp=ctrl+up, chatScroll
 - **The key then answers to your chord only.** Its old chord does nothing. The `?` menu, the hint line and the board's
   messages name your chord, on the web board too.
 - **A chord that is taken is refused, and you are told by which key:** `chatMessage=ctrl+l: ctrl+l is yes's key
-  already`. To use it anyway, move that key too, in the same value (`undo=ctrl+c, close=ctrl+q`). The key that opens
+  already`. To use it anyway, move that key too, in the same value (`undo=ctrl+c, close=ctrl+g`). The key that opens
   the board is refused too, and so is Herdr's prefix when that key starts with it.
 - **A plain character only for a key that is one already** (`talk`, `menu`, `sayYes`, `sayNo`): any other would be typed
   into the text box. The text box's own keys (`newline`) cannot be moved.

@@ -52,7 +52,7 @@ pub fn message(said: &str, action: &str) -> String {
 /// words: whatever else they held (another action, in any words) is not confirmed and does not go with it. With no
 /// task named (`tasks` empty), it is for the task whose agent the call talks to.
 pub fn confirmed(action: &str, tasks: &[String]) -> String {
-    let verb = ACTIONS.iter().find(|(a, _)| *a == action).map(|(a, _)| { let mut c = a.chars(); c.next().map(|f| f.to_uppercase().chain(c).collect::<String>()).unwrap_or_default() }).unwrap_or_default();
+    let verb = ACTIONS.iter().find(|(a, _)| *a == action).map(|(a, _)| crate::text::capital(a)).unwrap_or_default();
     if tasks.is_empty() { format!("{verb} this task.") } else { format!("{verb} {}.", tasks.join(" and ")) }
 }
 /// Words without the voice's expression tags ("[neutral]", "[laughs softly]"): they are for how it speaks, never shown

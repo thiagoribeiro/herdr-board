@@ -234,13 +234,13 @@
             Running the check · tests 31 of 47
    ◑ #8     Max length for task titles                                                  35%  6m left  R#1             1m
             Reading the diff.
-   ◐ #17    Max length for task titles [research]                                                                     1m
-            Reading the logs
- ↓ 5 more
+ ↓ 6 more
 
 ╭─ this machine › proj ›  #9  · Agent ─────────────────────────────────────────────────────────────────────────────────╮
+│                                                                                                                      │
+│  The agent has said nothing yet.                                                                                     │
 │                                                                                                                      │
 │  ❯ Keep                                                                                                              │
 │                                                                                                                      │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
-  enter add to #9's description · shift+enter new line · esc put away
+  enter send to #9's agent · shift+enter new line · esc put away

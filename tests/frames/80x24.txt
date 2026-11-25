@@ -138,13 +138,13 @@
             Conflict with main
    ✗ #14    Max length for task titles                                        1m
             Stopped without a summary
-
-
  ↓ 13 more
 
 ╭─ this machine › proj ›  #9  · Agent ─────────────────────────────────────────╮
 │                                                                              │
+│  The agent has said nothing yet.                                             │
+│                                                                              │
 │  ❯ Keep                                                                      │
 │                                                                              │
 ╰──────────────────────────────────────────────────────────────────────────────╯
-  enter add to #9's description · shift+enter new line · esc put away
+  enter send to #9's agent · shift+enter new line · esc put away

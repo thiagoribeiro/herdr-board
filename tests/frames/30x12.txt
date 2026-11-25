@@ -75,4 +75,4 @@
 ╭─ … › proj ›  #9  · Agent ──╮
 │  ❯ Keep                    │
 ╰────────────────────────────╯
-  enter add to #9
+  enter send to #9's agent

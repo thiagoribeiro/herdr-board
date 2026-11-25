@@ -15,7 +15,8 @@ pub fn waits(r: &Obj) -> bool { !r.b("archivedAt") && group_of(r) == NEEDS }
 pub fn next(s: &mut State) {
     let here = s.steps.iter().position(|id| *id == s.sel);
     let on = s.reply && s.reply_id == s.sel;
-    let need: Vec<(usize, &String)> = s.steps.iter().enumerate().filter(|(_, id)| s.items.iter().any(|r| r.s("id") == id.as_str() && waits(r))).collect();
+    let waiting: std::collections::HashSet<&str> = s.items.iter().filter(|r| waits(r)).map(|r| r.s("id")).collect();
+    let need: Vec<(usize, &String)> = s.steps.iter().enumerate().filter(|(_, id)| waiting.contains(id.as_str())).collect();
     let Some(to) = need.iter().find(|(n, _)| Some(*n) > here || (!on && Some(*n) == here)).or(need.first()).map(|(_, id)| (*id).clone()) else { return s.flash("Nothing in view needs you.", Ink::Muted) };
     s.sel = to.clone(); s.reply = true; s.reply_id = to; s.panel_top = 0;
     relist(s);
