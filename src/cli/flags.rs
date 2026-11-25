@@ -47,7 +47,7 @@ const AUTO_CHANGE: &[&str] = &["name", "prompt", "schedule", "when", "every-repo
 fn takes(cmd: &str, sub: &str) -> Option<Takes> {
     Some(match cmd {
         "board" | "--skill" | "skill" => f(&["skill"]),
-        "help" | "hook" | "keeper" | "keeper-work" | "open" | "open-coordinator" | "approve-current" | "serve" | "remote" => f(&[]),
+        "help" | "hook" | "keeper" | "keeper-work" | "open" | "ensure-open" | "open-coordinator" | "approve-current" | "serve" | "remote" => f(&[]),
         "docs" => f(&["check", "where", "guard"]),
         "turn-ended" => f(&["id", "role", "token", "round"]),
         "plan-written" => f(&["id", "token"]),

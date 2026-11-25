@@ -2,6 +2,7 @@
 //! run jobs; the loop that feeds each event to `update`, does what it answers and draws. Nothing slow runs on the loop:
 //! a key is answered from what was last read, and what has to wait (herdr, git, another machine) is a thread's.
 pub mod draw;
+pub mod ensure;
 pub mod held;
 pub mod input;
 pub mod mouse;

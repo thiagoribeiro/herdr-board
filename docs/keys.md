@@ -82,6 +82,9 @@ and `Ctrl+C` while it shows closes. In the popup, that last `Esc` closes the boa
 It is Herdr's, not the board's: a line in Herdr's `config.toml`, offered at the [first run](install.md) as `prefix+a`.
 The board never takes a key Herdr binds itself (`prefix+w` is Herdr's workspace picker) or one your config already binds:
 it refuses it and says what the key does today.
+It is not one of the board's own keys, so `board.keys` cannot move it: change its `key` line in Herdr's config and
+run `herdr server reload-config`. The board opened at Herdr's start is the one it brings back
+([the board at herdr's start](open-at-start.md)).
 
 Pressed again, the board key takes you back: from the board in its tab, to the pane you came from; with `board.open` set
 to `popup`, it closes the popup ([the board](board.md)). Herdr gives a popup every key, so there the board reads that key

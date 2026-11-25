@@ -76,6 +76,7 @@ impl FakeHerdr {
         let mut o = json!({ "pane_id": p.at("pane_id"), "workspace_id": p.at("workspace_id"), "tab_id": p.at("tab_id"), "terminal_id": p.at("terminal_id"), "cwd": p.at("cwd"), "foreground_cwd": p.at("cwd"),
             "agent": if p.at("agent").is_object() { p.at("agent").at("kind").clone() } else { Value::Null }, "agent_status": if p.at("agent").is_object() { p.at("agent").at("status").clone() } else { json!("unknown") } });
         if p.b("display_agent") { o["display_agent"] = p.at("display_agent").clone(); }
+        for k in ["label", "focused"] { if p.b(k) { o[k] = p.at(k).clone(); } } // as herdr names a plugin's pane (the board's is "Work board"), and the pane with the keyboard
         o
     }
     pub fn agent_out(p: &Value) -> Value {
@@ -182,7 +183,7 @@ impl FakeHerdr {
                 let n = st["workspaces"][0].i("nextT").max(2);
                 let t = Self::new_tab(&mut st, 0, &format!("{wid}:t{n}"), &n.to_string());
                 let np = st.i("nextP"); st["nextP"] = json!(np + 1);
-                let q = json!({ "pane_id": format!("{wid}:board"), "workspace_id": wid, "tab_id": t.at("tab_id"), "terminal_id": format!("term_{np}"), "cwd": st["workspaces"][0].at("cwd"), "agent": Value::Null, "label": "Work board" });
+                let q = json!({ "pane_id": format!("{wid}:board"), "workspace_id": wid, "tab_id": t.at("tab_id"), "terminal_id": format!("term_{np}"), "cwd": st["workspaces"][0].at("cwd"), "agent": Value::Null, "label": "Work board", "board": true });
                 arr(&mut st, "panes").push(q.clone());
                 return ok(json!({ "type": "plugin_pane_opened", "plugin_pane": { "entrypoint": "board", "plugin_id": "herdr-board", "pane": Self::pane_out(&q) } }));
             }

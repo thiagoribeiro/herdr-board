@@ -24,7 +24,7 @@ pub fn pane(st: &mut Value, verb: &str, arg2: &str, argv: &[String], flag: &dyn 
             // does not answer for this pane
             let under = ["tool", "helper", "child", "wrapped"].iter().any(|k| p.b(k));
             let fg = if st.b("pids") && p.at("agent").is_object() { p.at("agent").i("pid") } else if under { 1 } else if p.b("busy") { shell + 1 } else { shell };
-            let mut front = vec![json!({ "pid": fg, "name": if p.b("wrapped") { "node" } else if under { "agent" } else if p.b("busy") { "sleep" } else { "bash" } })];
+            let mut front = vec![json!({ "pid": fg, "name": if p.b("board") { "herdr-board" } else if p.b("wrapped") { "node" } else if under { "agent" } else if p.b("busy") { "sleep" } else { "bash" } })];
             if p.b("helper") { front.push(json!({ "pid": 2, "name": "mcp-server" })); }
             if p.b("child") { front.push(json!({ "pid": 3, "name": "sleep" })); }
             if p.b("wrapped") { front.push(json!({ "pid": 3, "name": p.at("agent").at("kind") })); }
