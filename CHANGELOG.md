@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.4.1 (2026-11-25)
+
+- The board opens once when herdr starts, and its key brings it back from anywhere (#9).
+- `Ctrl+Q` jumps to the next task that needs you and opens the reply box on it (#10).
+- Chat commands that skip the Coordinator: `!status [id …]`, `!start <id>`, `!stop <id>`, `!approve <id>` and
+  `!tell <id> <text>` (#11).
+- Your approval is tied to the commit that was reviewed (#12).
+
 ## 1.4.0 (2026-11-24)
 
 ### Coordinator quality and economy
