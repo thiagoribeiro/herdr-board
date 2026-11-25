@@ -34,17 +34,17 @@ pub fn next_step(t: &Obj) -> (&'static str, String) {
     (owner, status.t("next"))
 }
 
-/// The tasks named (by `,` too), else every task (`all`: with the done and archived ones).
-pub fn tasks(ids: &[String], all: bool) -> Res<Vec<Obj>> {
-    if ids.is_empty() { return Ok(list(ListOpts { include_archived: all, ..Default::default() })); }
-    ids.iter().flat_map(|s| s.split(',')).map(find).collect()
+/// The tasks named (by `,` too), else every task (`all`: with the done and archived ones); of `repo` when one is given.
+pub fn tasks(ids: &[String], all: bool, repo: &str) -> Res<Vec<Obj>> {
+    let found = if ids.is_empty() { list(ListOpts { include_archived: all, ..Default::default() }) } else { ids.iter().flat_map(|s| s.split(',')).map(find).collect::<Res<_>>()? };
+    Ok(found.into_iter().filter(|t| repo.is_empty() || t.s("repo") == repo).collect())
 }
 /// What `herdr-board status` and the chat's `!status` say: a snapshot of each task named, else of each one not done
 /// (`all`: every one), of `repo` when one is given, as it is live now.
 pub fn status(ids: &[String], all: bool, repo: &str) -> Res<Vec<Value>> {
     let live = crate::flow::live::board(true);
-    Ok(tasks(ids, all)?.into_iter()
-        .filter(|t| (repo.is_empty() || t.s("repo") == repo) && (!ids.is_empty() || all || !(["done", "tried"].contains(&t.s("stage")) || t.b("archivedAt"))))
+    Ok(tasks(ids, all, repo)?.into_iter()
+        .filter(|t| !ids.is_empty() || all || !(["done", "tried"].contains(&t.s("stage")) || t.b("archivedAt")))
         .map(|t| snapshot(live.iter().find(|r| r.s("id") == t.s("id")).unwrap_or(&t))).collect())
 }
 /// One short line per task: its key and short title, where it stands and for how long, whose turn it is and the next

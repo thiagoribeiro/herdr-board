@@ -14,7 +14,7 @@ turn and no tokens spent. The answer shows in the chat as the Coordinator's woul
 
 | Command | What it does | The same as |
 |---|---|---|
-| `!status [id …]` | one line per active task (or per task named): where it stands, whose turn, the next step ([status](status.md)) | `herdr-board status [id …]` |
+| `!status [id …]` | one line per active task (or per task named; to a repo's coordinator, of that repo): where it stands, whose turn, the next step ([status](status.md)) | `herdr-board status [id …]` |
 | `!start <id>` | puts an agent on the task | `herdr-board delegate <id>`, the start key |
 | `!stop <id>` | stops its agent; a later message picks it up again | `herdr-board stop <id>` |
 | `!approve <id>` | what the task waits for your yes to: a merge, a plan, a permission | `herdr-board approve <id>` |

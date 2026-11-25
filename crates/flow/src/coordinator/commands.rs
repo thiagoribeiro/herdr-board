@@ -14,17 +14,16 @@ const USAGE: &str = "!status [id …] · !start <id> · !stop <id> · !approve <
 /// Of the commands answered, the last few stay in the chat.
 const KEPT: usize = 6;
 
-/// The command these words are: its name, its task and the rest. None: they are words for the coordinator.
-fn parse(text: &str) -> Option<(&str, &str, &str)> {
+/// The command these words are: its name and what follows it. None: they are words for the coordinator.
+fn parse(text: &str) -> Option<(&str, &str)> {
     let words = text.trim().strip_prefix(PREFIX)?;
     let (name, rest) = words.split_once(char::is_whitespace).unwrap_or((words, ""));
-    if !NAMES.contains(&name) { return None; }
-    let (id, rest) = rest.trim_start().split_once(char::is_whitespace).unwrap_or((rest.trim(), ""));
-    Some((name, id, rest.trim()))
+    NAMES.contains(&name).then(|| (name, rest.trim()))
 }
-/// The command run: the board's answer, or the refusal of its guards.
-fn answer(name: &str, id: &str, text: &str) -> Res<String> {
-    if name == "status" { return crate::task_status::status(&std::iter::once(id).chain(text.split_whitespace()).filter(|i| !i.is_empty()).map(String::from).collect::<Vec<_>>(), false, "").map(|rows| format!("```\n{}\n```", crate::task_status::said(&rows))); }
+/// The command run: the board's answer, or the refusal of its guards. A repo's coordinator's `!status` is of its repo.
+fn answer(name: &str, args: &str, co: &Co) -> Res<String> {
+    if name == "status" { return crate::task_status::status(&args.split_whitespace().map(String::from).collect::<Vec<_>>(), false, co.repo().unwrap_or("")).map(|rows| format!("```\n{}\n```", crate::task_status::said(&rows))); }
+    let (id, text) = args.split_once(char::is_whitespace).map(|(i, t)| (i, t.trim())).unwrap_or((args, ""));
     if id.is_empty() || (name == "tell" && text.is_empty()) { crate::fail!("!{name} needs {}. The commands: {USAGE}", if id.is_empty() { "a task" } else { "the text" }); }
     // Another machine's exact actions on a task of this one (remote.rs) are the command line's, with its guards.
     let r = crate::remote::door("do", &json!({ "action": if name == "start" { "delegate" } else { name }, "id": id, "text": text }))?;
@@ -32,8 +31,8 @@ fn answer(name: &str, id: &str, text: &str) -> Res<String> {
 }
 /// Words that are a command: run, and kept with the answer for the chat. None: they go to the coordinator.
 pub fn run(text: &str, co: &Co) -> Option<Res<Obj>> {
-    let (name, id, rest) = parse(text)?;
-    let (reply, ok) = match answer(name, id, rest) { Ok(m) => (m, true), Err(e) => (e.msg, false) };
+    let (name, args) = parse(text)?;
+    let (reply, ok) = match answer(name, args, co) { Ok(m) => (m, true), Err(e) => (e.msg, false) };
     let entry = json!({ "said": text.trim(), "reply": say_ids(&reply, &repo_keys()), "ok": ok, "at": crate::clock::now() });
     Some(super::state::change(co, |c| {
         let mut l = c.arr("commands").to_vec();

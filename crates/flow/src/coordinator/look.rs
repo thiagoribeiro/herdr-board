@@ -52,8 +52,9 @@ pub fn look(co: impl Into<Co>) -> Look {
     let def = choice_of(&co);
     // What the board itself said in its chat: task results, and the answers to commands typed there.
     let mut results = crate::digest::messages(&co);
-    if let Some(c) = &c { results.extend(super::commands::talk(c)); results.sort_by_key(|m| m.at); }
+    if let Some(c) = &c { results.extend(super::commands::talk(c)); }
     let Some(c) = c.filter(|c| c.b("run") || c.b("pane") || !c.arr("queue").is_empty() || c.b("want") || c.b("error")) else {
+        results.sort_by_key(|m| m.at);
         return Look { state: "none".into(), readable: !results.is_empty(), talk: results, run: def.clone(), def, ..Default::default() };
     };
     let agent = if c.b("pane") && (crate::herdr::cli::fake().is_some() || socket_exists(socket)) { Herdr::new(Some(socket.into())).agent_get(c.s("pane")).ok().flatten() } else { None };

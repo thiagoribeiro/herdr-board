@@ -42,6 +42,10 @@ fn status_typed_on_the_board_is_answered_in_the_coordinators_chat_without_a_turn
     // one task, by its key
     let (a, q) = say(&w, &format!("!status {}", short(&id)));
     assert!(a.contains("Fix the login") && q.is_empty(), "{a}");
+    // a repo's coordinator speaks of its own repo's tasks
+    let of = |to: &str| send(&w.root, "!status", false, "", sw::coordinator::co::Co::of(w.socket.as_str(), to)).unwrap().arr("commands").last().unwrap().t("reply");
+    assert!(of("project:proj").contains("Fix the login"));
+    assert!(of("project:other").contains("No active tasks."), "{}", of("project:other"));
 }
 
 #[test]
