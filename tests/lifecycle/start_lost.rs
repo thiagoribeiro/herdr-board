@@ -65,7 +65,8 @@ fn a_check_whose_runner_is_lost_twice_fails_and_a_merge_waiting_in_the_line_is_l
     // the retry is lost before it took the task: no marker, and past the grace the check fails
     lose_jobs();
     sw::clock::advance(sw::hook::GRACE_MS + 1000);
-    pass(&w);
+    // The second look is at each task itself, on this thread's moved clock: it does not wait on a whole pass (housekeeping/once.rs).
+    for t in [&id, &queued] { sw::hook::retry_lost(&task(t)); }
     let t = task(&id);
     assert_eq!(t.s("stage"), "failed");
     assert_eq!(t.at("failure").s("title"), "A workflow step stopped unexpectedly");
