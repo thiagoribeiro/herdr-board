@@ -75,13 +75,16 @@ pub fn checking(r: &Obj) -> bool { r.s("stage") == "checking" && r.s("state") ==
 pub fn status_ink(r: &Obj) -> Ink {
     if r.b("archivedAt") { Ink::Muted } else if under_review(r) { Ink::Review } else if checking(r) { Ink::Check } else if queued(r) { Ink::Queue } else { group_ink(group_of(r)) }
 }
-/// A task as the screen reads it: `msg` is the line to show, `app` who is on it, `at` since when.
+/// A task as the screen reads it: `msg` is the line to show, `app` who is on it, `at` since when: at work, since it
+/// was set going; blocked, since its agent stopped to wait for you, when herdr saw that after its stage last changed
+/// (hook.rs keeps the moment in `last`); else since its stage changed.
 pub fn as_row(t: &Obj) -> Obj {
     let mut r = t.clone();
     r.put("raw", t.at("msg").clone());
     r.put("msg", t.t("note"));
     r.put("app", t.t("shownApp"));
-    let at = if t.s("state") == "working" { if t.b("since") { t.at("since").clone() } else { t.at("at").clone() } } else { t.at("at").clone() };
+    let blocked = t.s("state") == "blocked" && t.at("last").s("status") == "blocked" && t.at("last").i("at") > t.i("at");
+    let at = if t.s("state") == "working" { if t.b("since") { t.at("since").clone() } else { t.at("at").clone() } } else if blocked { t.at("last").at("at").clone() } else { t.at("at").clone() };
     r.put("at", at);
     r
 }

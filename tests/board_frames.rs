@@ -1,7 +1,7 @@
 //! Whole frames of the board, drawn by the terminal drawer into cells at sizes from 10×8 to 200×60, each with the list,
-//! the task beside it, the whole task, the ? menu and a draft: compared with the frames kept in tests/frames/ (written
-//! there when missing, or again with UPDATE_FRAMES=1). With colour, each cell's colour is kept too, as a letter per
-//! colour with a legend. Every frame holds to the rules that need no picture: no line over the width, the hint line last.
+//! the task beside it, the whole task, the ? menu, a draft and an answer to the next task that needs you: compared with
+//! the frames kept in tests/frames/ (written there when missing, or again with UPDATE_FRAMES=1). With colour, each
+//! cell's colour is kept too, as a letter per colour with a legend. Every frame holds to the rules that need no picture: no line over the width, the hint line last.
 use crate::common;
 use common::fixtures::fixture_rows;
 use common::*;
@@ -72,7 +72,7 @@ fn frames_at_every_size_with_and_without_colour() {
     let coloured = Theme::default_dark(false);
     for (wd, ht) in SIZES {
         let mut text = String::new();
-        for (part, keys) in [("the list", vec![]), ("the task beside it", vec!["alt+p"]), ("the whole task", vec!["alt+t"]), ("the ? menu", vec!["?"]), ("a draft", vec!["H", "e", "l", "l", "o", " ", "日", "本", " ", "🚀"])] {
+        for (part, keys) in [("the list", vec![]), ("the task beside it", vec!["alt+p"]), ("the whole task", vec!["alt+t"]), ("the ? menu", vec!["?"]), ("a draft", vec!["H", "e", "l", "l", "o", " ", "日", "本", " ", "🚀"]), ("the next that needs you, answered", vec!["ctrl+q", "K", "e", "e", "p"])] {
             let mut s = board(&w);
             for k in &keys { key(&mut s, k); }
             let buf = draw(&mut s, &plain, wd, ht);

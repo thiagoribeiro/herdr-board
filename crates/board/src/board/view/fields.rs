@@ -9,7 +9,7 @@ use crate::json::*;
 use crate::research::is_research;
 use crate::shown::ink::{Ink, Inked};
 use crate::shown::queue::queued;
-use crate::shown::row_says::{row_fields, sentence};
+use crate::shown::row_says::{row_fields, sentence, with_why};
 use crate::shown::states::{board_step, in_review, is_live, reviewer_mark, status_ink};
 
 /// The automations' mark: an arrow going round, where every task's mark is round, a diamond or a sign.
@@ -79,7 +79,7 @@ pub fn says_beside(s: &State, r: &Obj, tall: bool) -> Inked {
 pub fn says_under(s: &State, r: &Obj, says_beside_shown: bool) -> Inked {
     if is_auto(r) { return auto_said(s, r, if says_beside_shown { "why" } else { "all" }); }
     if let Some(p) = pending_said(r.at("pending")) { return p; }
-    let said = sentence(r);
+    let said = with_why(r, sentence(r));
     if !said.is_empty() { return said; }
     let st = r.s("stage");
     Inked::of(if st == "progress" { "Yours: no agent on it" } else if in_review(r) { "Not reviewed" } else if reviewer_mark(r) { "Under review" } else if r.s("state") == "working" { "Working" } else { "Needs you" }, Ink::Soft)

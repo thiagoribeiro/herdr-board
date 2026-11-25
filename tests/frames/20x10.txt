@@ -37,7 +37,7 @@
    ↑ ↓          move
                 bet…
                 tas…
- ↓ 280 more
+ ↓ 287 more
 ────────────────────
 ❯ Add a task
 ────────────────────
@@ -53,3 +53,14 @@
 ❯ Hello 日本 🚀
 ────────────────────
   enter add it as a…
+== the next that needs you, answered
+ herdr-board  proj
+ All 18  tab next
+▌ ? Max length for
+▌   task titles
+▌   Asks you ·
+▌   Should …  1m ago
+╭──────────────────╮
+│ ❯ Keep           │
+╰──────────────────╯
+  enter send to #9

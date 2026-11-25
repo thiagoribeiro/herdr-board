@@ -135,6 +135,7 @@ pub fn run_as(s: &mut State, k: K, p: &Press, r: Option<&Obj>, fx: &mut Vec<Effe
         K::Yes => if let Some(r) = r { act::yes(s, r, fx) },
         K::SendBack => if let Some(r) = r { act::send_back(s, r, fx) },
         K::NextAttempt => if let Some(r) = r { act::next_attempt(s, r) },
+        K::NextNeeds => super::needs::next(s),
         K::Stop => match r { Some(r) => act::stop(s, r, fx), None => if let Some(t) = super::pilot::keyed(s) { super::pilot::run(s, &t, false, fx) } },
         K::Pilot => match super::pilot::keyed(s).filter(|_| r.is_none()) { Some(t) => super::pilot::toggle(s, &t, fx), None => s.flash(format!("{} turns a coordinator's autopilot on and off: select a machine's or a project's row.", key_name("autopilot")), Ink::Muted) },
         K::Archive => match r { Some(r) => act::archive_selected(s, r, fx), None if super::heads::selected(s).is_some() => super::archive_project::key(s, fx), None => s.flash("Select a task to archive or restore.", Ink::Muted) },

@@ -76,7 +76,7 @@
                 heading
    space        talk to this row's agent, and back to the
                 top row's coordinator
- ↓ 68 more
+ ↓ 69 more
 
 ────────────────────────────────────────────────────────────
 ❯ Add a task
@@ -103,3 +103,24 @@
 ❯ Hello 日本 🚀
 ────────────────────────────────────────────────────────────
   enter add it as a task · esc put away
+== the next that needs you, answered
+ herdr-board  proj
+ All 18   Needs 5   Working 9   Ready 1   To do 2   Done 1
+ ▾ this machine  1 project · 18 tasks
+   ▾ needs you
+▌  ? #9     Max length for task titles
+▌           Asks you · Should the old settings file be
+▌           removed, or kept for one more version s…  1m ago
+   @ #10    Max length for task titles
+            Needs a login                             1m ago
+
+ ↓ 16 more
+
+╭─ this machine › proj ›  #9  · Agent ─────────────────────╮
+│                                                          │
+│  The agent has said nothing yet.                         │
+│                                                          │
+│  ❯ Keep                                                  │
+│                                                          │
+╰──────────────────────────────────────────────────────────╯
+  enter send to #9's agent · esc put away

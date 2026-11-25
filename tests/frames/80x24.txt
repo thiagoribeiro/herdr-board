@@ -92,7 +92,7 @@
 
  ctrl: does something
    ctrl+l       yes: approve the merge, say yes, retry, take it as it is
- ↓ 47 more
+ ↓ 48 more
 
 ────────────────────────────────────────────────────────────────────────────────
 ❯ Add a task
@@ -123,3 +123,28 @@
 ❯ Hello 日本 🚀
 ────────────────────────────────────────────────────────────────────────────────
   enter add it as a task · ctrl+s add it and put an agent on it · esc put away
+== the next that needs you, answered
+ herdr-board  proj
+ All 18   Needs 5   Working 9   Ready 1   To do 2   Done 1
+ ▾ this machine  1 project · 18 tasks
+   ▾ needs you
+▌  ? #9     Max length for task titles                                        1m
+▌           Asks you · Should the old settings file be removed, or kept for one…
+   @ #10    Max length for task titles                                        1m
+            Needs a login
+   ! #12    Max length for task titles                        R#1 PR#123456   1m
+            The pull request's checks fail
+   ✗ #13    Max length for task titles                                        1m
+            Conflict with main
+   ✗ #14    Max length for task titles                                        1m
+            Stopped without a summary
+ ↓ 13 more
+
+╭─ this machine › proj ›  #9  · Agent ─────────────────────────────────────────╮
+│                                                                              │
+│  The agent has said nothing yet.                                             │
+│                                                                              │
+│  ❯ Keep                                                                      │
+│                                                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  enter send to #9's agent · shift+enter new line · esc put away

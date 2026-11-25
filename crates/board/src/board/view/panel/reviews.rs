@@ -54,8 +54,7 @@ pub fn reviews(k: &mut Kit, c: &Ctx, r: &Obj) -> bool {
     let kept = |e: &Value| -> Vec<Inked> {
         let Some(kk) = e.arr("kept").last() else { return vec![] };
         let words = crate::store::reviews::kept_words(kk, e.i("round"));
-        let mut ch = words.chars();
-        let words = ch.next().map(|f| f.to_uppercase().collect::<String>() + ch.as_str()).unwrap_or_default();
+        let words = crate::text::capital(&words);
         Kit::wrap_at(&format!("{words}{}{}", if kk.b("at") { format!(" · {} ago", age(c.now - kk.i("at"))) } else { String::new() }, if e.arr("kept").len() > 1 { format!(" · {} times", e.arr("kept").len()) } else { String::new() }), room).into_iter().map(|l| l.recolor(Ink::Muted)).collect()
     };
     let notes = |e: &Value| -> Vec<Inked> { let mut v: Vec<Inked> = if *e == last && stale && !e.b("error") { Kit::wrap_at("The work changed since this review.", room).into_iter().map(|l| l.recolor(Ink::Muted)).collect() } else { vec![] }; v.extend(kept(e)); v };

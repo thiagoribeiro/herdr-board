@@ -142,7 +142,7 @@ pub fn pr_comment(rv: &Value, round: i64) -> String {
         let w = went_to(f);
         format!("- **{}**: {}{}{}{}", f.s("severity"), f.s("subject"), if f.s("where").is_empty() { String::new() } else { format!(" (`{}`)", f.s("where")) },
             if f.s("proof").is_empty() { String::new() } else { format!("\n  Proof: {}", f.s("proof")) },
-            if f.b("preexisting") && !w.is_empty() { format!("\n  {}{}.", w[..1].to_uppercase(), &w[1..]) } else { String::new() })
+            if f.b("preexisting") && !w.is_empty() { format!("\n  {}.", crate::text::capital(&w)) } else { String::new() })
     };
     let group = |title: &str, xs: &[Value]| if xs.is_empty() { String::new() } else { format!("**{title}**\n{}", xs.iter().map(item).collect::<Vec<_>>().join("\n")) };
     let left = rv.i("left");

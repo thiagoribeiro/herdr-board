@@ -221,6 +221,8 @@ terminal program-status spec ([OSC 7501](https://mitchellh.com/writing/program-s
 
 - All of them are under `needs you`, in its colour, red. With colour off (`NO_COLOR`), the mark alone tells a task that
   waits from one that went wrong.
+- `Ctrl+Q` goes from one to the next with the reply box on it. Each row says why it waits and for how long
+  ([what needs you, one key at a time](needs-you.md)).
 - Finished work that passed and waits for your yes is none of these: its mark is `◆`, in green, under `ready to approve`
   (an exclamation mark there would read as "something is wrong", and nothing is).
 - The words for where a task stands are one list (`crates/core/src/status_words.rs`), which the rows, the State line,

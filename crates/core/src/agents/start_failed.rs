@@ -27,7 +27,6 @@ fn missing_here(program: &str, screen: &str) -> bool {
     let said = regex::Regex::new(&format!(r"(?im)(^|[\s:])(/\S*/)?{p}: (command not found|not found|no such file or directory)|(command not found|unknown command):? {p}\s*$")).unwrap();
     said.is_match(screen)
 }
-fn cap(s: &str) -> String { let mut c = s.chars(); c.next().map(|f| f.to_uppercase().chain(c).collect()).unwrap_or_default() }
 /// The last lines of a pane as they show, without colours: "" when it cannot be read.
 pub fn screen_of(api: &Herdr, pane: &str) -> String {
     if pane.is_empty() { return String::new(); }
@@ -77,7 +76,7 @@ pub fn explain(s: &Start, said: &str, screen: &str) -> Why {
 }
 /// The whole account: what went wrong, what herdr said, the terminal's last lines, and where to look further.
 pub fn detail(w: &Why, said: &str, screen: &str, look: &str, log: &Path) -> String {
-    let mut parts = vec![format!("{}.", cap(&w.short))];
+    let mut parts = vec![format!("{}.", crate::text::capital(&w.short))];
     if !said.trim().is_empty() { parts.push(format!("What herdr said: {}", said.trim())); }
     if !screen.trim().is_empty() { parts.push(format!("The last lines of its terminal:\n{screen}")); }
     parts.push(format!("{look}This is also written to {}.", log.display()));
@@ -99,5 +98,5 @@ pub fn say(api: &Herdr, s: &Start, pane: &str, said: &str, log_file: &Path) -> S
     let w = explain(s, said, &screen);
     tidy(api, pane, &screen);
     log(log_file, s.kind, &detail(&w, said, &screen, "", log_file));
-    format!("{}. {} What its terminal showed is in {}.\nWhat herdr said: {}", cap(&w.short), w.next, log_file.display(), said.trim())
+    format!("{}. {} What its terminal showed is in {}.\nWhat herdr said: {}", crate::text::capital(&w.short), w.next, log_file.display(), said.trim())
 }

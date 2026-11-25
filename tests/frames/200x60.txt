@@ -4,7 +4,7 @@
  ▾ this machine  1 project · 18 tasks
    ▾ needs you
    ? #9     Max length for task titles                                                                                                                                                            1m ago
-            Should the old settings file be removed, or kept for one more version so that nobody loses what they set?
+            Asks you · Should the old settings file be removed, or kept for one more version so that nobody loses what they set?
    @ #10    Max length for task titles                                                                                                                                                            1m ago
             Needs a login
    ! #12    Max length for task titles                                                                                                                                            R#1 PR#123456   1m ago
@@ -65,7 +65,7 @@
  ▾ this machine  1 project · 18 tasks                                                                                           │
    ▾ needs you                                                                                                                  │  Status ─────────────────────────────────────────────────────────────
    ? #9     Max length for task titles                                                                                   1m ago │  State        ◐ working · for 1m
-            Should the old settings file be removed, or kept for one more version so that nobody loses what they set?           │  Progress     ██████████████░░░░░░░░░░ 60% · 11m left
+            Asks you · Should the old settings file be removed, or kept for one more version so that nobody loses what they se… │  Progress     ██████████████░░░░░░░░░░ 60% · 11m left
    @ #10    Max length for task titles                                                                                   1m ago │  Now          Found the cause; now checking every caller of the
             Needs a login                                                                                                       │               resize handler for the same mistake
    ! #12    Max length for task titles                                                                   R#1 PR#123456   1m ago │  On it        claude
@@ -198,6 +198,7 @@
  ctrl: does something
    ctrl+l       yes: approve the merge, say yes, retry, take it as it is
    ctrl+r       send it back: tell the agent to fix it, or to continue
+   ctrl+q       the next task that needs you: answer it
    ctrl+s       put an agent on this task
    ctrl+x       stop this task's agent
    ctrl+a       archive this task
@@ -235,8 +236,7 @@
    ⟳            an automation (dimmed while it is off; the word after it says on or off)
    65% 2m left  how far it is, and the time left; the time after it is how long it has worked, or how long ago it stopped
    R#2          the review it is on or last had, coloured by where it stands: passed, failed, the reviewer working
-   PR#16        its pull request: green when its checks pass, red when they fail
- ↓ 3 more
+ ↓ 4 more
 
 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 ❯ Add a task
@@ -248,7 +248,7 @@
  ▾ this machine  1 project · 18 tasks
    ▾ needs you
    ? #9     Max length for task titles                                                                                                                                                            1m ago
-            Should the old settings file be removed, or kept for one more version so that nobody loses what they set?
+            Asks you · Should the old settings file be removed, or kept for one more version so that nobody loses what they set?
    @ #10    Max length for task titles                                                                                                                                                            1m ago
             Needs a login
    ! #12    Max length for task titles                                                                                                                                            R#1 PR#123456   1m ago
@@ -303,3 +303,64 @@
 ❯ Hello 日本 🚀
 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
   enter add it as a task · ctrl+s add it and put an agent on it · shift+enter new line · esc put away
+== the next that needs you, answered
+ herdr-board  proj
+ All 18   Coordinators 0   Needs you 5   Working 9   Ready 1   To do 2   Done 1   Automations 0   Pinned 0
+ ▾ this machine  1 project · 18 tasks
+   ▾ needs you
+▌  ? #9     Max length for task titles                                                                                                                                                            1m ago
+▌           Asks you · Should the old settings file be removed, or kept for one more version so that nobody loses what they set?
+   @ #10    Max length for task titles                                                                                                                                                            1m ago
+            Needs a login
+   ! #12    Max length for task titles                                                                                                                                            R#1 PR#123456   1m ago
+            The pull request's checks fail
+   ✗ #13    Max length for task titles                                                                                                                                                            1m ago
+            Conflict with main
+   ✗ #14    Max length for task titles                                                                                                                                                            1m ago
+            Stopped without a summary
+   ▾ ready to approve
+   ◆ #11    Max length for task titles                                                                                                                                            R#1 PR#60       1m ago
+            Pass
+   ▾ working
+   ◐ #2     Max length for task titles                                                                                                                    ███░░░░░  40% 90m left                  1m
+            Drafting
+   ◇ #4     Max length for task titles                                                                                                                                                            1m
+            Starting
+   ◐ #5     Max length for task titles                                                                                                                    █████░░░  60% 11m left                  1m
+            Found the cause; now checking every caller of the resize handler for the same mistake
+   ◐ #12345 Max length for task titles                                                                                                                    ████████ 100% 24h left                400d
+            xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx…
+   ◇ #7     Max length for task titles                                                                                                                    █████░░░  65%  3m left                  1m
+            Running the check · tests 31 of 47
+   ◑ #8     Max length for task titles                                                                                                                    ███░░░░░  35%  6m left  R#1             1m
+            Reading the diff.
+   ◐ #17    Max length for task titles [research]                                                                                                                                                 1m
+            Reading the logs
+   ◐ #18    日本語のタイトルはとても長いので二倍の幅になります 🚀🚀 and then some more                                                                    ░░░░░░░░   5%                           1m
+            幅の広い文字 🎉 の行
+   ◷ #3     Max length for task titles                                                                                                                              Q#2                           1m
+            Waiting for a free slot
+   ▾ to do
+   ○ #1     Max length for task titles                                                                                                                                                            1m ago
+   ○ #19    TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT                                                                                                                          1m ago
+   ▾ done
+     ↓ 1 done (alt+d shows them)
+
+
+
+
+
+
+
+
+
+
+
+╭─ this machine › proj ›  #9  · Agent ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│                                                                                                                                                                                                      │
+│  The agent has said nothing yet.                                                                                                                                                                     │
+│                                                                                                                                                                                                      │
+│  ❯ Keep                                                                                                                                                                                              │
+│                                                                                                                                                                                                      │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  enter send to #9's agent · shift+enter new line · esc put away
