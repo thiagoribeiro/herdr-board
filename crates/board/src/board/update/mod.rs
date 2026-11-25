@@ -104,6 +104,7 @@ pub mod keys;
 pub mod landing;
 pub mod link;
 pub mod menu;
+pub mod needs;
 pub mod mouse;
 pub mod paste;
 pub mod pending;

@@ -4,11 +4,11 @@
 use super::ink::{Ink, Inked};
 use super::queue::tag as queue_tag;
 use super::review_words::{result_ink, review_note, review_tag_inked};
-use super::states::{failed_review, failure_for, in_review, needs_you, status_ink};
+use super::states::{failed_review, failure_for, group_of, in_review, needs_you, standing, status_ink};
 use super::words::{age, bar, clean, left, pr_tag};
 use crate::gate;
 use crate::json::*;
-use crate::status_words::review_tally;
+use crate::status_words::{review_tally, words::NEEDS};
 use crate::store::reviews::current_review;
 use crate::store::retries::waiting_of;
 
@@ -71,4 +71,14 @@ pub fn sentence(r: &Obj) -> Inked {
         return asks(text);
     }
     quiet(msg)
+}
+/// A row under Needs you says first why it waits, in the words of where it stands (`Asks you`, `Asks for your OK`,
+/// `Needs a login`, `Review failed`, `Plan ready`, `Pick one`), then what it says: the reason once, never twice. One
+/// that went wrong has its mark and its reason already, and one with nothing more than "needs you" stays as it was.
+pub fn with_why(r: &Obj, said: Inked) -> Inked {
+    let why = if group_of(r) == NEEDS { standing(r) } else { return said };
+    let text = said.text();
+    if why == NEEDS || text.get(..why.len()).is_some_and(|h| h.eq_ignore_ascii_case(&why)) { return said; }
+    let head = Inked::of(format!("{}{}", why[..1].to_uppercase(), &why[1..]), status_ink(r));
+    if text.is_empty() || BARE_ALL.contains(&text.as_str()) { head } else { head.add(Inked::of(" · ", Ink::Soft)).add(said) }
 }

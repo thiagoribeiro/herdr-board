@@ -55,6 +55,7 @@ pub fn enter(s: &mut State, text: &str, r: Option<&Obj>, fx: &mut Vec<Effect>) {
         _ => dispatch(s, words.trim(), false, reply_to.as_ref(), fx),
     }
     s.input.set_text("");
+    if let Some(r) = &reply_to { super::needs::after_reply(s, r); }
 }
 pub fn tab(s: &mut State, text: &str, r: Option<&Obj>, fx: &mut Vec<Effect>) {
     // Words for a coordinator go with enter alone, and it decides what to start: the delegate key does nothing with them.

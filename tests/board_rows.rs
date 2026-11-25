@@ -132,12 +132,12 @@ fn a_row_with_no_pr_and_no_bar_uses_the_empty_space_on_its_right_also_beside_row
         let lines: Vec<String> = row_lines(&s, &t, &quiz, width, &l).iter().map(|l| l.text()).collect();
         assert!(has(&lines[0], r"^[ ▌]\? #\d+ Choose the palette +0s ago$"), "the time at the right edge at {width}: {:?}", lines[0]);
         assert_eq!(len(&lines[0]), width);
-        assert_eq!(lines[1], "      Sand or pebbles on the beach, and which palm?", "whole sentence at {width}");
+        assert_eq!(lines[1], "      Asks you · Sand or pebbles on the beach, and which palm?", "whole sentence at {width}");
     }
     // Too narrow for the whole sentence: it is cut at the window's edge, not where the other rows' columns start.
     let l = lay(&mut s, &t, &all, 43, 120);
     let tight = row_lines(&s, &t, &quiz, 43, &l)[1].text();
-    assert!(has(&tight, r"^[ ▌] {5}Sand or pebbles on the beach, and wh[^…]*…$"), "{tight:?}"); assert_eq!(len(&tight), 43);
+    assert!(has(&tight, r"^[ ▌] {5}Asks you · Sand or pebbles on the be[^…]*…$"), "{tight:?}"); assert_eq!(len(&tight), 43);
     // The cause, pinned down: a cell a row does not have is nothing at all, never colour around nothing.
     let mut more = all.clone();
     more.push(with(&quiz, json!({ "state": "done", "stage": "done" }))); more.push(with(&quiz, json!({ "state": "idle", "stage": "todo" })));

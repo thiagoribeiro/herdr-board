@@ -64,7 +64,7 @@ fn a_live_tasks_row_is_two_lines_the_second_what_it_says_under_its_name_a_done_t
     for r in quiet() { assert!(!is_live(&r), "{}", r.s("title")); assert_eq!(lines(&mut s, &r, 100).len(), 1, "{}", r.s("title")); }
     let under = |s: &mut State, r: &Rec, width: usize| { let l = lines_in(s, r, std::slice::from_ref(r), width, SCREEN); assert_eq!(l.len(), 2, "{}", r.s("title")); assert!(!has(&l[0], "Reading|Running|Pass|Fail|Sand|check failed"), "{l:?}"); assert!(l.iter().all(|x| len(x) <= width)); l[1].clone() };
     let said: Vec<String> = live().iter().map(|r| under(&mut s, r, 100)).collect();
-    assert_eq!(said, ["      Reading the panel and its tests.", "      Running the tests", "      Running the repo's check", "      Pass · 1 minor", "      Review failed · 1 critical", "      Sand or pebbles?", "      The check failed"]);
+    assert_eq!(said, ["      Reading the panel and its tests.", "      Running the tests", "      Running the repo's check", "      Pass · 1 minor", "      Review failed · 1 critical", "      Asks you · Sand or pebbles?", "      The check failed"]);
     let first = lines(&mut s, &live()[0], 100)[0].clone();
     assert!(has(&first, r"^[ ▌]◐ #\d+ Agent at work +█+░+ +40% 12m left +2h$"), "{first:?}");
     // It has the row's whole width, and is cut at its end when it is longer still: never a third line.

@@ -94,15 +94,15 @@ fn rows_that_need_you_say_what_blocks_them_whole_under_the_name() {
     let (base, working) = (v.base(), v.working());
     // what a row needs from you is under its name, whole: it never costs the row a column, and is cut only at the window's edge
     let stuck = with(&working, json!({ "state": "blocked", "kind": "question", "stage": "asks", "title": "Build a flying game", "msg": "Which colour should the plane be?" }));
-    m(&v.row(&stuck, 75), r"^[ ▌]\? #\d+ Build a flying game +█+░+ +50% +0s ago\n[ ▌] {5}Which colour should the plane be\?$");
-    m(&v.row(&stuck, 31), r"\n[ ▌] {5}Which colour should the …$");
+    m(&v.row(&stuck, 75), r"^[ ▌]\? #\d+ Build a flying game +█+░+ +50% +0s ago\n[ ▌] {5}Asks you · Which colour should the plane be\?$");
+    m(&v.row(&stuck, 31), r"\n[ ▌] {5}Asks you · Which colour …$");
     m(&v.row(&stuck, 120), r"█+░+ +50% +0s ago\n[^\n]*be\?$");
     // rows that need you say what blocks them, under the name and without Markdown marks; with nothing said, in plain words
     let ask = "Which colour should the plane be, and should the **islands** have `palm` trees?";
-    for r in [with(&base, json!({ "stage": "", "kind": "question", "msg": ask })), with(&base, json!({ "mergeFailed": true, "msg": ask })), with(&base, json!({ "state": "error", "kind": "", "stage": "failed", "msg": ask }))] {
-        m(&v.row(&r, 120), r"^ \S #\d+ Build a flying game +0s ago\n[ ▌] {5}Which colour should the plane be, and should the islands have palm trees\?$");
+    for (r, why) in [(with(&base, json!({ "stage": "", "kind": "question", "msg": ask })), "Asks you · "), (with(&base, json!({ "mergeFailed": true, "msg": ask })), ""), (with(&base, json!({ "state": "error", "kind": "", "stage": "failed", "msg": ask })), "")] {
+        m(&v.row(&r, 120), &format!(r"^ \S #\d+ Build a flying game +0s ago\n[ ▌] {{5}}{why}Which colour should the plane be, and should the islands have palm trees\?$"));
     }
-    m(&v.row(&with(&base, json!({ "stage": "asks", "kind": "question", "msg": "" })), 120), r" +0s ago\n[ ▌] {5}Has a question$");
+    m(&v.row(&with(&base, json!({ "stage": "asks", "kind": "question", "msg": "" })), 120), r" +0s ago\n[ ▌] {5}Asks you$"); // the reason alone, never "Asks you · Has a question"
     m(&v.row(&with(&base, json!({ "stage": "asks", "kind": null, "msg": "needs you" })), 120), r"^[ ▌]! #\d+ Build a flying game +0s ago\n[ ▌] {5}Needs you$"); // nothing of its own to say: the plain words, never an empty line
     // another row's long sentence or progress does not take the verdict away
     let pr = v.pr();
