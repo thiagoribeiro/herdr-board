@@ -93,7 +93,8 @@ fn after_an_approval_the_sync_is_the_last_safety_net_a_conflict_there_goes_to_th
     let target = main_moves(&w, "a.txt", "from main\n"); // main moves and you approve before the board has looked
     w.script(json!({ "worker": [{ "merge": target, "files": { "a.txt": "merged\n" }, "commit": "resolve", "note": "Resolved." }] }));
     finish_line::approve(&id, None, false).unwrap();
-    let mut t = settle(&id);
+    settle(&id);
+    let mut t = approve_again(&id, "only main was merged in (1 commit of main, conflicts resolved in 1 file)");
     for _ in 0..2 { if t.s("stage") != "done" { t = settle(&id); } }
     assert_eq!(t.s("stage"), "done", "{} {} {}", t.s("stage"), t.s("msg"), t.at("failure"));
     let p = pane_prompts(&w, &id);

@@ -7,6 +7,9 @@ use std::path::Path;
 use sw::actions::finish_line;
 use sw::json::*;
 
+/// Your yes is for the commit you approved.
+mod approved_head;
+
 #[test]
 fn unsaved_files_in_your_checkout_stop_the_merge_and_nothing_is_forced() {
     let w = world_with(Opts { repo: true, settings: json!({ "review.when": "never" }), ..Default::default() });

@@ -184,7 +184,8 @@ fn with_approve_main_moving_at_the_remote_makes_no_merge_and_no_push_while_it_wa
     assert_eq!(sync_jobs(), 0, "and neither is asked again until main moves");
     // after your yes: main is merged in, pushed, and the pull request merges at that commit
     finish_line::approve(&calm, None, false).unwrap();
-    let t = settle(&calm);
+    settle(&calm);
+    let t = approve_again(&calm, "only main was merged in (1 commit of main); 1 file (g.txt)");
     assert_eq!(t.s("stage"), "done", "{}", t.at("failure"));
     // merged through its pull request at a commit that holds main, the one pushed after main was merged in
     let at = gh_log(&w).lines().filter_map(|l| l.strip_prefix("pr merge 7 --squash --match-head-commit ")).last().unwrap_or("").to_string();

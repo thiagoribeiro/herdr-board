@@ -1,6 +1,6 @@
 //! The pipeline's second half: the adversarial review (or the one that still stands), the loop that sends failing work
 //! back, the limits, and then done, the approval gate, or the merge by itself.
-use super::auto_merge::by_itself;
+use super::auto_merge::{back_to_you, by_itself};
 use super::hand_over::hand_over;
 use super::review::run_review;
 use super::review_screen::with_screen;
@@ -143,9 +143,13 @@ pub fn after_review(c: Ctx, g: &mut Guard) -> Res<()> {
             fail(g, f, FailHow::default())?;
             return Ok(());
         }
+        // Your yes is for the commit you approved: any other one (a new commit, main merged in) comes back to you,
+        // checked and reviewed (or its review kept), with what changed since. The board's own merge has no yes to lose.
+        let lapsed = if t.at("mergeIntent").b("auto") { None } else { super::approved_head::changed_since(c.tree, t.at("mergeIntent").s("verifiedHead"), &head, t.s("syncedTo")) };
         let stat = change.as_ref().map(|x| x.at("stat").clone()).unwrap_or(Value::Null);
-        t = g.set(|t| { t.put("review", review.clone().unwrap_or(Value::Null)); t.put("stat", stat.clone()); t.put("reviewedHead", head_v.clone()); t.obj_mut("mergeIntent").put("verifiedHead", head_v.clone()); })?;
+        t = g.set(|t| { t.put("review", review.clone().unwrap_or(Value::Null)); t.put("stat", stat.clone()); t.put("reviewedHead", head_v.clone()); if lapsed.is_none() { t.obj_mut("mergeIntent").put("verifiedHead", head_v.clone()); } })?;
         if hold_pr_failure(g, &mut t)? { return Ok(()); }
+        if let Some(what) = lapsed { flow::sidebar::tell_sidebar(&g.set(|t| back_to_you(t, &format!(" {what}")))?); return Ok(()); }
         g.set(|t| { t.put("stage", "merging"); t.put("msg", "Merging"); })?;
         return crate::land::land_core(id, g);
     }
