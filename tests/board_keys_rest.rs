@@ -18,6 +18,7 @@ fn the_popup_says_how_to_get_back_before_it_closes_for_an_agent_and_takes_no_key
     unsafe { std::env::set_var("HERDR_ENV", "1") };
     w.script(json!({ "worker": [{ "status": "working", "screen": "● Editing\n" }] }));
     let id = w.add("Add a greeting"); delegate(&id); settle(&id);
+    sw::clock::set(Some(sw::clock::now()));
     let mut v = open_with(&w.root, 34, true);
     v.s.ctx.leave_ms = 30; v.s.ctx.board_key = "prefix+w".into();
     let now = sw::clock::now(); tick(&mut v, now);

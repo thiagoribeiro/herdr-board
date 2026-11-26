@@ -40,7 +40,7 @@ fn the_settings_key_on_this_machines_heading_changes_your_own_settings_and_a_tas
     b.s.sel = "head:machine\t".into();
     b.press(&["ctrl+e"]);
     assert_eq!(whose(&b), Some(Whose::Coord("machine".into(), "you".into())));
-    b.rows = 160; // the page is whole on the screen: its coordinator's rows come first
+    b.rows = 180; // the page is whole on the screen: its coordinator's rows come first
     let t = b.screen(120).join("\n");
     assert!(t.contains("This coordinator") && t.contains("Every coordinator and task (you)") && t.contains("autopilot.every"), "the heading's coordinator's rows, then yours: {t}");
     assert!(t.contains("Merge method") && t.contains("merge.method") && t.contains("built in") && t.contains("The board key opens"), "work and board settings, each saying where it comes from: {t}");
