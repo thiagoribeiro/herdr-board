@@ -29,6 +29,32 @@ fn codex_is_given_no_daemon_only_from_the_version_that_has_it() {
 }
 
 #[test]
+fn real_programs_agent_version_refresh_finds_the_users_install_behind_an_unrunnable_path_entry() {
+    use std::os::unix::fs::PermissionsExt;
+    let w = world();
+    let program = w.base.join("home/.local/bin/claude");
+    std::fs::create_dir_all(program.parent().unwrap()).unwrap();
+    std::fs::write(&program, r#"#!/bin/sh
+[ "$1" = --version ] || exit 1
+echo 'Claude Code 2.1.332'
+"#).unwrap();
+    std::fs::set_permissions(&program, std::fs::Permissions::from_mode(0o755)).unwrap();
+    let file = sw::store::files::data_dir().join("versions.json");
+    sw::store::files::write_json(&file, &json!({ "claude": { "v": "", "at": sw::clock::now(), "found": false } })).unwrap();
+    assert!(!sw::agents::installed::installed("claude"));
+    sw::agents::installed::refresh().unwrap();
+    let broken = w.base.join("broken-bin"); std::fs::create_dir_all(&broken).unwrap();
+    std::fs::write(broken.join("claude"), "#!/missing-agent-interpreter\n").unwrap();
+    std::fs::set_permissions(broken.join("claude"), std::fs::Permissions::from_mode(0o755)).unwrap();
+    let old_path = std::env::var_os("PATH").unwrap_or_default();
+    unsafe { std::env::set_var("PATH", &broken); }
+    let version = sw::agents::installed::version_of("claude");
+    unsafe { std::env::set_var("PATH", old_path); }
+    assert_eq!(version, "2.1.332", "cache={}, home={}, program={}", read(&file), sw::store::files::user_home().display(), program.display());
+    assert!(sw::agents::installed::installed("claude"));
+}
+
+#[test]
 fn an_older_codex_works_and_reviews_without_the_flag_it_would_quit_on() {
     let w = world_with(Opts { repo: true, settings: json!({ "worker.agent": "codex", "reviewer.agent": "codex", "review.when": "always" }), ..Default::default() });
     codex_at("0.153.4");

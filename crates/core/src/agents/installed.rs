@@ -9,6 +9,8 @@ use crate::store::marks::mark;
 use std::path::{Path, PathBuf};
 
 fn versions_file() -> PathBuf { data_dir().join("versions.json") }
+/// Explicit health-check refresh: discard stale installation results and probe again in this process's environment.
+pub fn refresh() -> crate::err::Res<()> { write_json(&versions_file(), &json!({})) }
 /// How long a program is given to say its version: one that hangs holds up nobody for longer (`late`).
 const VERSION_MS: u64 = 5000;
 /// The installed version of a program ("" when it is not installed), asked at most every ten minutes, of its own
@@ -18,8 +20,22 @@ pub fn version_of(k: &str) -> String {
     let all = read_obj(&versions_file()).unwrap_or_default();
     if all.at(k).is_object() && now() - all.at(k).i("at") < 600000 { return all.at(k).t("v"); }
     use std::process::{Command, Stdio};
-    let r = Command::new(super::kinds::program(k)).arg("--version").stdin(Stdio::null()).stdout(Stdio::piped()).stderr(Stdio::null()).spawn()
+    let program = super::kinds::program(k);
+    let probe = |exe: &Path| Command::new(exe).arg("--version").stdin(Stdio::null()).stdout(Stdio::piped()).stderr(Stdio::null()).spawn()
         .map_err(|_| false).and_then(|c| crate::herdr::cli::wait_with_timeout(c, VERSION_MS).map_err(|_| true));
+    let mut r = probe(Path::new(program));
+    // A PATH entry can exist but fail to spawn (for example an obsolete interpreter). Try the user's actual install.
+    for dir in crate::herdr::find::spots(&user_home()) {
+        if !matches!(r, Err(false)) { break; }
+        let exe = dir.join(program); if crate::herdr::find::runs(&exe) { r = probe(&exe); }
+    }
+    if matches!(r, Err(false)) {
+        let path = crate::login_env::login_shell().map(|o| crate::login_env::path_of(&o)).unwrap_or_default();
+        for dir in path.split(':').filter(|d| !d.is_empty()) {
+            let exe = Path::new(dir).join(program); if crate::herdr::find::runs(&exe) { r = probe(&exe); }
+            if !matches!(r, Err(false)) { break; }
+        }
+    }
     let (v, found, late) = match &r {
         Ok(o) if o.status == 0 => (first_version(&o.stdout), true, false),
         Ok(_) => (String::new(), true, false),
