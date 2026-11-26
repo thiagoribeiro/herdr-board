@@ -16,7 +16,7 @@ use crate::store::retries::waiting_of;
 /// The facts under Status, in the order they are drawn.
 pub const ORDER: [&str; 12] = ["head", "state", "after", "progress", "now", "time", "tokens", "who", "over", "made", "change", "next"];
 fn same(a: &str, b: &str) -> bool { a.trim().to_lowercase() == b.trim().to_lowercase() }
-fn asks(kind: &str) -> String { needs(kind).map(|w| { let mut c = w.chars(); c.next().map(|f| f.to_uppercase().collect::<String>() + c.as_str()).unwrap_or_default() }).unwrap_or_else(|| "Needs you".into()) }
+fn asks(kind: &str) -> String { crate::text::capital(needs(kind).unwrap_or(crate::status_words::words::NEEDS)) }
 /// The status part's facts by name, redrawn when some go.
 pub struct Top { pub rows: Vec<(&'static str, Vec<Inked>)> }
 impl Top {

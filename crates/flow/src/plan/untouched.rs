@@ -12,7 +12,8 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 pub const PATCH: &str = "changed-too-early.patch";
-fn base_of(t: &Obj) -> String { [t.s("syncedTo"), t.s("baseSha"), t.s("from")].into_iter().find(|s| !s.is_empty()).unwrap_or("").to_string() }
+/// Where the task's work starts: main as last merged in, else the commit it started from.
+pub fn base_of(t: &Obj) -> String { [t.s("syncedTo"), t.s("baseSha"), t.s("from")].into_iter().find(|s| !s.is_empty()).unwrap_or("").to_string() }
 fn dir_of(t: &Obj) -> Option<PathBuf> { let d = cwd_of(t); (d.exists() && is_repo(&d)).then_some(d) }
 struct Look { oid: String, head: String, dirty: bool, ignored: Vec<String> }
 /// One git program says it all for a folder: its commit and branch, whether anything is changed, what it ignores.

@@ -45,7 +45,7 @@ fn a_yes_says_nothing_under_the_chat_its_row_says_it_and_the_menu_names_every_ke
     assert!(!has(&text, r"Coordinator's chat|restart|new Coordinator|ctrl\+[dog]\b|alt\+[vhrn]\b|delete  "), "{text}");
     assert!(text.contains("↑↓ pick a key · enter press it · esc close the menu"), "{text}");
     // a line picked with the arrows does what its key does: archive, and the task leaves the list's top
-    s.press(&["down", "down", "down", "down", "down", "enter"]); assert!(task("proj/2").b("archivedAt"));
+    s.press(&["down", "down", "down", "down", "down", "down", "enter"]); assert!(task("proj/2").b("archivedAt"));
     assert!(!s.screen(120)[..12].join("\n").contains("Other"), "{}", s.text());
     s.rows = 34;
     // the archive: its own hint line, and ctrl+z there undoes the archiving

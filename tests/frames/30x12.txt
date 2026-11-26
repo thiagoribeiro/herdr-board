@@ -45,7 +45,7 @@
                 headings
    ← →          fold the
                 heading; on a
- ↓ 182 more
+ ↓ 190 more
 ──────────────────────────────
 ❯ Add a task
 ──────────────────────────────
@@ -63,3 +63,16 @@
 ❯ Hello 日本 🚀
 ──────────────────────────────
   enter add it as a task
+== the next that needs you, answered
+ herdr-board  proj
+ All 18  tab next
+ ▾ this machine  1 project · …
+  ▾ needs you
+▌ ? #9     Max length for task
+▌          titles
+▌   Asks you · Should the old
+▌   settings file be …  1m ago
+╭─ … › proj ›  #9  · Agent ──╮
+│  ❯ Keep                    │
+╰────────────────────────────╯
+  enter send to #9's agent

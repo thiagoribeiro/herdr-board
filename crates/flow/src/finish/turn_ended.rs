@@ -215,7 +215,7 @@ fn finish_steps(id: &str, g: &mut Guard, mut t: Task, ev: Option<Value>, force: 
         if let Some(r) = &refused { return model_refused::fail_refused(g, &t, r, &why); }
         if x.passing {
             let gu = format!("{}. ", gave_up("agent", &x.reason, tries + 1));
-            let mut f = failure("agent", "Agent stopped", &format!("{}{}The board told it to carry on each time and has stopped trying.\n\nIts error:\n{why}", gu[..1].to_uppercase(), &gu[1..]), &format!("Wait for the provider to recover (or choose another model), then reply or press {} to tell the agent to continue.", key_name("sendBack")));
+            let mut f = failure("agent", "Agent stopped", &format!("{}The board told it to carry on each time and has stopped trying.\n\nIts error:\n{why}", crate::text::capital(&gu)), &format!("Wait for the provider to recover (or choose another model), then reply or press {} to tell the agent to continue.", key_name("sendBack")));
             f.put("auth", false); f.put("agentCanFix", true); f.put("msg", format!("Agent stopped: {gu}Its error: {}", one_line(&why, 200)));
             fail(g, f, FailHow::default())?;
             return Ok(());

@@ -7,6 +7,9 @@ use sw::board::theme::Theme;
 use sw::json::*;
 use sw::shown::states::standing;
 
+/// The key to the next task that needs you, and what its row says of the wait.
+mod next;
+
 fn base() -> Value { json!({ "id": "proj/1", "title": "Plan v1", "agent": "claude", "app": "claude", "at": sw::clock::now(), "owner": "me" }) }
 fn with(more: Value) -> Obj { let mut b = base(); for (k, v) in more.as_object().unwrap() { b[k] = v.clone(); } obj(b) }
 fn asks(kind: Option<&str>) -> Obj { let mut o = with(json!({ "state": "blocked", "stage": "asks", "msg": "What one job must v1 nail?" })); if let Some(k) = kind { o.put("kind", k); } o }

@@ -82,6 +82,9 @@ and `Ctrl+C` while it shows closes. In the popup, that last `Esc` closes the boa
 It is Herdr's, not the board's: a line in Herdr's `config.toml`, offered at the [first run](install.md) as `prefix+a`.
 The board never takes a key Herdr binds itself (`prefix+w` is Herdr's workspace picker) or one your config already binds:
 it refuses it and says what the key does today.
+It is not one of the board's own keys, so `board.keys` cannot move it: change its `key` line in Herdr's config and
+run `herdr server reload-config`. The board opened at Herdr's start is the one it brings back
+([the board at herdr's start](open-at-start.md)).
 
 Pressed again, the board key takes you back: from the board in its tab, to the pane you came from; with `board.open` set
 to `popup`, it closes the popup ([the board](board.md)). Herdr gives a popup every key, so there the board reads that key
@@ -164,7 +167,7 @@ herdr-board set board.keys "chatMessage=ctrl+g, chatScrollUp=ctrl+up, chatScroll
 - **The key then answers to your chord only.** Its old chord does nothing. The `?` menu, the hint line and the board's
   messages name your chord, on the web board too.
 - **A chord that is taken is refused, and you are told by which key:** `chatMessage=ctrl+l: ctrl+l is yes's key
-  already`. To use it anyway, move that key too, in the same value (`undo=ctrl+c, close=ctrl+q`). The key that opens
+  already`. To use it anyway, move that key too, in the same value (`undo=ctrl+c, close=ctrl+g`). The key that opens
   the board is refused too, and so is Herdr's prefix when that key starts with it.
 - **A plain character only for a key that is one already** (`talk`, `menu`, `sayYes`, `sayNo`): any other would be typed
   into the text box. The text box's own keys (`newline`) cannot be moved.
@@ -213,6 +216,7 @@ below always use the PC names.
 | `Ctrl+L` | yes, to whatever the task waits for: approve the merge (it asks first), keep the selected one of several attempts (it asks first), say yes to the agent, retry the step that went wrong as it stands, or take work that stopped without a summary, or at a limit, as it is; end a chat-only task's conversation ([chat.md](chat.md)); on a task whose agent is at rest while its row still says "Finishing", finish it with what its agent said last |
 | `Ctrl+R` | send it back: whatever went wrong (a failed check, a conflict, an error, a review with findings) goes to the task's agent to fix; a stopped agent is told to continue |
 | `Ctrl+N` | on a task done several times at once ([attempts.md](attempts.md)): move to its next attempt, in the task panel. `Ctrl+L` keeps the selected one, `Enter` goes into its tab |
+| `Ctrl+Q` | to the next task that needs you, with the chat on it, so what you type next is your answer: the selected one when the chat is not on it yet, else the next in the order of the list, round again. Only tasks the list shows: a filter or a folded heading keeps its own. With `board.nextAfterReply` on, an answer sent to a task that needs you moves on to the next one by itself ([needs-you.md](needs-you.md)) |
 | `Ctrl+S` | put an agent on the task. Words for a coordinator go with `Enter` alone: it decides itself what to start, and starts what you ask it to. With no Coordinator on this machine, what you typed is added as a task with an agent on it at once. On an automation's row: fire the automation now. On a coordinator's row (a machine's or a project's row), with nothing typed: start that coordinator, in its own conversation, as an agent is put on a task (`Ctrl+O` is its autopilot); with no machine's, project's or task's row selected (a status group's heading, an empty list), the main Coordinator |
 | `Ctrl+X` | stop the agent, when one is running (working, starting, checking, under review, or waiting for your answer); the selection stays where you were, on the next row when the stopped task moves to another group. On a task with no agent running (idle, never started, stopped, finished, archived) it asks to remove the task instead: `y` removes it, its worktree too. A task you marked as your own work in progress has no agent to stop: there the key puts it back in to do. A stop never goes on to that question by itself: removing takes a second `Ctrl+X`, and a `y`. On an automation's row: remove the automation (it asks first; the tasks it made stay). On a coordinator's row: stop that coordinator (with no machine's, project's or task's row selected: the main Coordinator); your next message, or `Ctrl+S`, starts it again in the same conversation |
 | `Ctrl+O` | on a coordinator's row (a machine's or a project's row): its [autopilot](autopilot.md) on, with its saved goal and settings, and off again; on one at `needs you` or `could not start` it starts again. With no machine's, project's or task's row selected (a status group's heading, an empty list): the main Coordinator's. On, its row keeps its mark and has `[autopilot]` after its name and a line under it that says what autopilot does |
@@ -238,6 +242,7 @@ below always use the PC names.
 | `Alt+S` | how the list is grouped, in turn: by status, by repo (each group under its repo's name; a row's tag never names a repo), by machine (each machine under its own heading, its tasks under it by how much they need you) |
 | `Alt+D` | every done task, or none: the list then counts them on one line |
 | `Alt+O` | go into the selected row's agent: its real herdr pane. On a task's row its agent; on a machine's or a project's row (or All machines) its coordinator, started first when it is not running, on another machine there. The board keeps running in its own tab and is there as you left it; your key goes back to it (as a popup it closes, and your key opens it again where it was). On a status group's heading there is none ([machine-and-project-coordinators.md](machine-and-project-coordinators.md)) |
+| `Alt+G` | the selected task's change in your own diff tool (`board.diffTool`, plain `git diff` in `less` unless you set one; against where the task left main, or since your approval when that approval lapsed): a herdr pane beside the board, in the task's folder. Quitting the tool closes the pane and you are back on the board. Only a task of this machine, in herdr ([diff-tool.md](diff-tool.md)) |
 | `Alt+M` | whose board shows, the filter row's first item: every machine, then each machine by itself (this one too) in the order of herdr's sidebar |
 
 **The text box's own** (not a key of the board, and not in the `?` menu)

@@ -85,8 +85,7 @@ pub fn autos_in(s: &State, host: &str, name: &str) -> Vec<Obj> {
 /// What a folded heading says it holds: `7 tasks`, `7 tasks, 1 automation`, `1 automation`.
 pub fn holds(folded: usize, autos: usize) -> String {
     let tasks = folded.saturating_sub(autos);
-    let say = |n: usize, what: &str| format!("{n} {what}{}", if n == 1 { "" } else { "s" });
-    [(tasks > 0 || autos == 0).then(|| say(tasks, "task")), (autos > 0).then(|| say(autos, "automation"))].into_iter().flatten().collect::<Vec<_>>().join(", ")
+    [(tasks > 0 || autos == 0).then(|| crate::text::many(tasks, "task")), (autos > 0).then(|| crate::text::many(autos, "automation"))].into_iter().flatten().collect::<Vec<_>>().join(", ")
 }
 /// The selected heading, when the selection is on one.
 pub fn selected(s: &State) -> Option<&Row> { if !is_head(&s.sel) { return None; } s.rows.iter().find(|r| matches!(r, Row::Head { id, .. } if *id == s.sel)) }

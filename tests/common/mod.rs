@@ -124,6 +124,15 @@ pub fn settle(id: &str) -> Obj {
 }
 /// What a task's row on the board is (the flow's own view of it, with what herdr says).
 pub fn row(id: &str) -> Obj { sw::flow::live::board(true).into_iter().find(|t| t.s("id") == id).unwrap_or_default() }
+/// An approved merge whose commit changed since your yes waits for it again and says what changed (`says`, among it):
+/// given again, it goes on. What the task is then, settled.
+pub fn approve_again(id: &str, says: &str) -> Obj {
+    let t = task(id);
+    assert_eq!(t.s("stage"), "approval", "{}", t.at("failure"));
+    assert!(t.s("msg").contains("Changed since your approval") && t.s("msg").contains(says), "{}", t.s("msg"));
+    sw::actions::finish_line::approve(id, None, false).unwrap_or_else(|e| panic!("approve {id}: {}", e.msg));
+    settle(id)
+}
 pub fn delegate(id: &str) { sw::actions::start::delegate(id, vec![]).unwrap_or_else(|e| panic!("delegate {id}: {}", e.msg)); }
 pub fn read(p: &Path) -> String { std::fs::read_to_string(p).unwrap_or_default() }
 /// The folder pi keeps a working folder's conversations in, under its sessions: named after its path (`--home-me-app--`).

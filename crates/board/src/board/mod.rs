@@ -6,6 +6,7 @@
 pub use sw_flow::board::{key_style, keys, remap, theme};
 pub mod data;
 pub mod job;
+pub mod job_diff;
 pub mod job_far;
 pub mod run;
 pub mod screens;

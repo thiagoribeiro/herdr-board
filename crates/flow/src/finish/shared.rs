@@ -23,7 +23,7 @@ pub fn approval_message_with(t: &Obj, note: &str) -> String {
     let rv = current_review(t);
     let kept = match rv { Some(rv) if rv.b("keptAt") && rv.at("kept").is_object() => {
         let w = kept_words(rv.at("kept"), review_history(t).last().map(|e| e.i("round")).unwrap_or(0));
-        format!(" {}{}.", w[..1].to_uppercase(), &w[1..])
+        format!(" {}.", crate::text::capital(&w))
     } _ => String::new() };
     let summary = first_line(t.s("summary"));
     let held = if crate::autopilot::control_files::held(t) { " Agent control files changed or could not be checked; it waits for your own yes (autopilot.controlFilesWaits)." }

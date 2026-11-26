@@ -42,9 +42,9 @@ pub fn depart() {
     let socket = current_socket();
     for f in [note_file(&socket), popup_file(&socket)] { if read_json(&f).map(|n| n.i("pid") == std::process::id() as i64).unwrap_or(false) { let _ = std::fs::remove_file(f); } }
 }
-fn go_to(api: &Herdr, pane: &Value) { let _ = api.workspace_focus(pane.s("workspace_id")); let _ = api.tab_focus(pane.s("tab_id")); let _ = api.pane_focus(pane.s("pane_id")); }
+pub(super) fn go_to(api: &Herdr, pane: &Value) { let _ = api.workspace_focus(pane.s("workspace_id")); let _ = api.tab_focus(pane.s("tab_id")); let _ = api.pane_focus(pane.s("pane_id")); }
 /// The board that runs in a pane of this herdr: its note and its pane as herdr has it.
-fn running(socket: &str) -> Option<(Herdr, Value, Value)> {
+pub(super) fn running(socket: &str) -> Option<(Herdr, Value, Value)> {
     let n = read_json(&note_file(socket))?;
     if !n.b("pane") || !pid_alive(n.i("pid")) { return None; }
     let api = Herdr::new(Some(socket.into()));
@@ -57,7 +57,7 @@ fn why(e: &crate::herdr::HerdrError) -> String {
     if e.code == "ui_busy" { "herdr has another popup open, maybe hidden behind another tab, and shows one at a time. Close that one for the board's popup".into() }
     else { format!("herdr did not open the popup ({})", crate::text::cut(&crate::text::squash(if e.message.is_empty() { &e.code } else { &e.message }), 120)) }
 }
-fn popup_wanted() -> bool { setting("board.open", None) == json!("popup") }
+pub(super) fn popup_wanted() -> bool { setting("board.open", None) == json!("popup") }
 /// How much of herdr's screen the popup takes: in a small window all of it.
 pub fn size_for(area: Option<&Value>) -> (&'static str, &'static str) { match area { Some(a) if a.i("width") < 110 || a.i("height") < 30 => ("100%", "100%"), _ => ("90%", "90%") } }
 /// The board key with the popup chosen: none open: opened; one shows: closed (the toggle; `keep`: left open).
@@ -101,12 +101,16 @@ pub fn show(on: Option<&str>, keep: bool) -> String {
         return n.t("pane");
     }
     let api = Herdr::new(Some(socket.clone()));
-    let Ok(Some(pane_id)) = api.open_board() else { return String::new() };
-    let Some(pane) = api.pane_get(&pane_id) else { return String::new() };
-    api.tab_rename(pane.s("tab_id"), "board");
+    let Some(pane) = open_tab(&api) else { return String::new() };
     go_to(&api, &pane);
-    say(&pane_id, &told, "yellow", &socket);
-    pane_id
+    say(pane.s("pane_id"), &told, "yellow", &socket);
+    pane.t("pane_id")
+}
+/// A new board in a tab of its own, named `board` (herdr gives that tab the keyboard): its pane as herdr has it.
+pub(super) fn open_tab(api: &Herdr) -> Option<Value> {
+    let pane = api.pane_get(&api.open_board().ok()??)?;
+    api.tab_rename(pane.s("tab_id"), "board");
+    Some(pane)
 }
 /// The task whose agent (or reviewer) runs in a pane: the popup opens on the task you were looking at.
 pub fn task_at(pane: &str) -> Option<Obj> {

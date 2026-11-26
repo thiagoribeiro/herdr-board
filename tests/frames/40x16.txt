@@ -60,7 +60,7 @@
    pgup pgdn    a page of tasks up or
                 down (in the whole
                 task: a page of its
- ↓ 107 more
+ ↓ 111 more
 
 ────────────────────────────────────────
 ❯ Add a task
@@ -83,3 +83,20 @@
 ❯ Hello 日本 🚀
 ────────────────────────────────────────
   enter add it as a task · esc put away
+== the next that needs you, answered
+ herdr-board  proj
+ All 18  tab next
+ ▾ this machine  1 project · 18 tasks
+  ▾ needs you
+▌ ? #9     Max length for task titles
+▌          Asks you · Should the old
+▌          settings file be rem…  1m ago
+
+╭─ this machine › proj ›  #9  · Agent ─╮
+│                                      │
+│  The agent has said nothing yet.     │
+│                                      │
+│  ❯ Keep                              │
+│                                      │
+╰──────────────────────────────────────╯
+  enter send to #9's agent

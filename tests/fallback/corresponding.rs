@@ -6,19 +6,21 @@ use crate::agent_models::equivalents::pairs;
 
 #[test]
 fn a_provider_failure_uses_its_peer_and_that_peers_effort_in_the_same_worktree() {
-    let w = cut_world("30", json!({ "worker.agent": "claude/sonnet", "worker.access": "auto", "fallback.corresponding": true })); pairs();
-    w.script(json!({ "worker": [{ "files": { "half.txt": "half\n" }, "commit": "half", "ends": "claude-usage-limit-made" }, { "status": "working" }] }));
-    let id = w.add("Continue existing work"); delegate(&id); let t = settle(&id);
-    assert_eq!(t.s("stage"), "working", "{}", t.at("failure"));
-    assert_eq!(starts(&w), vec!["claude", "codex"]);
-    let h = &t.arr("handovers")[0];
-    assert_eq!((h.s("reasonType"), h.s("correspondingEntry"), h.s("family")), ("availability", "routine_codex", "routine"));
-    let launches = calls(&w); let last = launches.iter().find(|c| c.starts_with("agent start") && c.contains("--kind codex")).unwrap();
-    assert!(last.contains("gpt-6.1-sol") && last.contains("medium") && last.contains("--approve-for-me"), "{last}");
-    assert!(!last.contains("dangerously"), "a peer keeps the native access contract");
-    assert_eq!(std::fs::read_to_string(std::path::Path::new(t.s("worktree")).join("half.txt")).unwrap(), "half\n");
-    assert!(prompts(&w, t.at("link").s("pane")).last().unwrap().contains("taking this task over"));
-    assert!(t.at("spent").b("files"), "the earlier worker's evidence survives the handover");
+    for ending in ["claude-usage-limit-made", "claude-model-not-found"] {
+        let w = cut_world("30", json!({ "worker.agent": "claude/sonnet", "worker.access": "auto", "fallback.corresponding": true })); pairs();
+        w.script(json!({ "worker": [{ "files": { "half.txt": "half\n" }, "commit": "half", "ends": ending }, { "status": "working" }] }));
+        let id = w.add("Continue existing work"); delegate(&id); let t = settle(&id);
+        assert_eq!(t.s("stage"), "working", "{}", t.at("failure"));
+        assert_eq!(starts(&w), vec!["claude", "codex"]);
+        let h = &t.arr("handovers")[0];
+        assert_eq!((h.s("reasonType"), h.s("correspondingEntry"), h.s("family")), ("availability", "routine_codex", "routine"));
+        let launches = calls(&w); let last = launches.iter().find(|c| c.starts_with("agent start") && c.contains("--kind codex")).unwrap();
+        assert!(last.contains("gpt-6.1-sol") && last.contains("medium") && last.contains("--approve-for-me"), "{last}");
+        assert!(!last.contains("dangerously"), "a peer keeps the native access contract");
+        assert_eq!(std::fs::read_to_string(std::path::Path::new(t.s("worktree")).join("half.txt")).unwrap(), "half\n");
+        assert!(prompts(&w, t.at("link").s("pane")).last().unwrap().contains("taking this task over"));
+        assert!(t.at("spent").b("files"), "the earlier worker's evidence survives the handover");
+    }
 }
 
 #[test]
@@ -38,18 +40,33 @@ fn a_routed_outage_keeps_its_quality_tier_and_failed_review_escalates_instead_of
 
 #[test]
 fn a_cut_off_reviewer_uses_its_own_correspondent_as_the_same_independent_review() {
-    let w = cut_world("30", json!({ "reviewer.agent": "codex/gpt-6.1-sol", "reviewer.effort": "low", "fallback.corresponding": true })); pairs();
+    for ending in ["codex-unauthorized", "codex-model-not-supported"] {
+        let w = cut_world("30", json!({ "reviewer.agent": "codex/gpt-6.1-sol", "reviewer.effort": "low", "fallback.corresponding": true })); pairs();
+        w.script(json!({ "worker": [{ "files": { "done.txt": "done\n" }, "commit": "work", "note": "Done." }],
+            "reviewer": [{ "ends": ending }, { "verdict": { "meets": true, "text": "Checked it", "findings": [] } }] }));
+        let id = w.add("Independent review with availability fallback"); delegate(&id); let t = settle(&id);
+        assert_eq!(t.s("stage"), "approval", "{}", t.at("failure"));
+        assert_eq!(t.s("reviewerOn"), "claude/sonnet");
+        let h = t.arr("handovers").iter().find(|h| h.s("role") == "reviewer").unwrap();
+        assert_eq!((h.s("correspondingEntry"), h.s("reasonType")), ("routine", "availability"));
+        let launches = calls(&w);
+        assert!(launches.iter().any(|c| c.starts_with("agent start") && c.contains("--kind claude") && c.contains("--model sonnet") && c.contains("--effort high")), "{launches:?}");
+        let history = sw::store::reviews::review_history(&t);
+        assert_eq!(history.len(), 1); assert_eq!(history[0].i("round"), 1);
+    }
+}
+
+#[test]
+fn a_reviewers_correspondent_preserves_the_effort_explicitly_set_on_the_task() {
+    let w = cut_world("30", json!({ "reviewer.agent": "codex/gpt-6.1-sol", "fallback.corresponding": true })); pairs();
     w.script(json!({ "worker": [{ "files": { "done.txt": "done\n" }, "commit": "work", "note": "Done." }],
         "reviewer": [{ "ends": "codex-unauthorized" }, { "verdict": { "meets": true, "text": "Checked it", "findings": [] } }] }));
-    let id = w.add("Independent review with availability fallback"); delegate(&id); let t = settle(&id);
-    assert_eq!(t.s("stage"), "approval", "{}", t.at("failure"));
-    assert_eq!(t.s("reviewerOn"), "claude/sonnet");
-    let h = t.arr("handovers").iter().find(|h| h.s("role") == "reviewer").unwrap();
-    assert_eq!((h.s("correspondingEntry"), h.s("reasonType")), ("routine", "availability"));
+    let id = w.add("Review with explicit effort");
+    sw::store::settings::change::set_value("reviewer.effort", &json!("medium"), &sw::store::settings::lookup::Scope::task(&task(&id))).unwrap();
+    delegate(&id); let t = settle(&id);
+    assert_eq!((t.s("stage"), t.s("reviewerOn")), ("approval", "claude/sonnet"), "{}", t.at("failure"));
     let launches = calls(&w);
-    assert!(launches.iter().any(|c| c.starts_with("agent start") && c.contains("--kind claude") && c.contains("--model sonnet") && c.contains("--effort high")), "{launches:?}");
-    let history = sw::store::reviews::review_history(&t);
-    assert_eq!(history.len(), 1); assert_eq!(history[0].i("round"), 1);
+    assert!(launches.iter().any(|c| c.starts_with("agent start") && c.contains("--kind claude") && c.contains("--model sonnet") && c.contains("--effort medium")), "{launches:?}");
 }
 
 #[test]

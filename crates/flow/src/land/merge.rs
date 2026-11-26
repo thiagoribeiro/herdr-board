@@ -141,7 +141,7 @@ pub fn land_core(id: &str, g: &mut Guard) -> Res<()> {
                 });
                 return Ok(());
             }
-            // A clean update changed the commit: it is checked again, then merged under the approval given.
+            // A clean update changed the commit: it is checked again, then waits for your yes to the commit it is now.
             "merged" => return reverify(id, g, &t, "Checking the branch updated with main", Some(&r)),
             _ => { let p = sync::seen_patch(&t, Some(&r)); g.set(|t| sync::apply(t, p))?; }
         }

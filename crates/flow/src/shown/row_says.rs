@@ -4,11 +4,11 @@
 use super::ink::{Ink, Inked};
 use super::queue::tag as queue_tag;
 use super::review_words::{result_ink, review_note, review_tag_inked};
-use super::states::{failed_review, failure_for, in_review, needs_you, status_ink};
+use super::states::{failed_review, failure_for, group_of, in_review, needs_you, standing, status_ink};
 use super::words::{age, bar, clean, left, pr_tag};
 use crate::gate;
 use crate::json::*;
-use crate::status_words::review_tally;
+use crate::status_words::{review_tally, words::NEEDS};
 use crate::store::reviews::current_review;
 use crate::store::retries::waiting_of;
 
@@ -63,7 +63,7 @@ pub fn sentence(r: &Obj) -> Inked {
     if r.s("state") == "done" { return if r.s("stage") == "done" && r.b("doneWhy") { quiet(words(r.s("doneWhy"))) } else { Inked::new() }; }
     // Queued after other tasks: "Queued after HSW-6", quiet as any other line. Only to wait for them, never started:
     // nothing (after.rs).
-    if super::queue::waits_after(r) { let w = super::queue::words(r); return quiet(format!("{}{}", w[..1].to_uppercase(), &w[1..])); }
+    if super::queue::waits_after(r) { let w = super::queue::words(r); return quiet(crate::text::capital(&w)); }
     // Near a limit: how much is used, before what it is doing, so it is never the part cut off.
     if r.at("limits").b("near") && r.s("state") == "working" { return Inked::of(r.at("limits").t("near"), Ink::Peach).add(quiet(if msg.is_empty() { msg } else { format!(" · {msg}") })); }
     if needs_you(r) {
@@ -71,4 +71,16 @@ pub fn sentence(r: &Obj) -> Inked {
         return asks(text);
     }
     quiet(msg)
+}
+/// A row under Needs you says first why it waits, in the words of where it stands (`Asks you`, `Asks for your OK`,
+/// `Needs a login`, `Review failed`, `Plan ready`, `Pick one`), then what it says: the reason once, never twice. One
+/// that went wrong has its mark and its reason already, and one with nothing more than "needs you" stays as it was.
+pub fn with_why(r: &Obj, said: Inked) -> Inked {
+    if group_of(r) != NEEDS { return said; }
+    let why = standing(r);
+    if why == NEEDS { return said; }
+    let text = said.text();
+    if text.get(..why.len()).is_some_and(|h| h.eq_ignore_ascii_case(&why)) { return said; }
+    let head = Inked::of(crate::text::capital(&why), status_ink(r));
+    if text.is_empty() || BARE_ALL.contains(&text.as_str()) { head } else { head.add(Inked::of(" · ", Ink::Soft)).add(said) }
 }

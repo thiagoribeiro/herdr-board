@@ -55,7 +55,8 @@ pub fn approve(id: &str, seen: Option<(Value, Value)>, anyway: bool) -> Res<Said
         let mut mi = json!({ "approvedAt": now(), "repairs": t.at("mergeIntent").i("repairs"), "verifiedHead": t.at("reviewedHead") });
         // Merged in spite of GitHub's failed checks: they are not looked at again for this merge.
         if checks.is_some() { mi["anyway"] = json!(true); t.put("prFailure", Value::Null); }
-        t.put("mergeIntent", mi); t.put("checksWait", Value::Null);
+        // A new yes: the one that lapsed before it is no longer what the diff key compares with (board/job_diff.rs).
+        t.put("lapsedApproval", Value::Null); t.put("mergeIntent", mi); t.put("checksWait", Value::Null);
         Ok(Change::Write)
     })?;
     flow::sidebar::tell_sidebar(&t);
@@ -142,7 +143,7 @@ pub fn send_failure(id: &str) -> Res<Said> {
     let merge_retry = f.s("phase") == "sync" && cur.b("mergeIntent");
     let text = format!("The workflow is blocked: {}\n\n{}\n\nNext step: {}\n\nResolve what you safely can in your own working folder, run the checks, then finish again so the board continues its review and approval workflow. This is not permission to ship, delete work, alter the human's checkout, or bypass a login or required approval. If you need the human, report blocked and explain what is needed.{}",
         f.s("title"), f.s("detail"), if f.b("next") { f.t("next") } else { "Investigate and fix it.".into() },
-        if merge_retry { " The human already approved this merge. After this main-branch conflict repair, the board rechecks, reviews and retries that approved merge; do not push or merge into the human's branch yourself." } else { "" });
+        if merge_retry { " The human already approved this merge. After this main-branch conflict repair, the board rechecks and reviews it before that merge goes on (the human approves a commit they did not see again); do not push or merge into the human's branch yourself." } else { "" });
     flow::live::assert_live(&cur)?;
     flow::git::cancel_auto_merge(&cur)?;
     if merge_retry {

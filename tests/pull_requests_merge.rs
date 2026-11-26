@@ -148,6 +148,7 @@ fn approved_after_main_moved(w: &World, id: &str, reviewed: &str) {
     let main = main_moves(w, "other.txt", "main\n");
     sw::actions::finish_line::approve(id, None, false).unwrap();
     settle(id);
+    approve_again(id, "main was merged in; 1 file (other.txt)"); // your yes was for the commit before main came in
     let head = merged_at(w, id);
     assert_ne!(head, reviewed); assert!(holds(w, &head, &main) && holds(w, &head, reviewed), "the reviewed work with main merged in");
     assert!(!gh_log(w).contains("Head branch was modified"));

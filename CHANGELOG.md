@@ -1,6 +1,14 @@
 # Changelog
 
-## Unreleased
+## 1.4.1 (2026-11-25)
+
+- The board opens once when herdr starts, and its key brings it back from anywhere (#9).
+- `Ctrl+Q` jumps to the next task that needs you and opens the reply box on it (#10).
+- Chat commands that skip the Coordinator: `!status [id …]`, `!start <id>`, `!stop <id>`, `!approve <id>` and
+  `!tell <id> <text>` (#11).
+- Your approval is tied to the commit that was reviewed (#12).
+
+## 1.4.0 (2026-11-24)
 
 ### Coordinator quality and economy
 
@@ -11,6 +19,7 @@
   repeated side effects. Usage separates new input, cache creation/reads and output even with no token limit.
 - Durable coordinator memory, context-budget hints and checkpoints that preserve model choices and prior sessions.
 - Reviewers receive complete task requirements, including requirements beyond the former 3,000-character cutoff.
+
 ### Status and stalls
 
 - `herdr-board status`: one line per active task, with where it stands, for how long, whose turn it is (you, the
@@ -27,12 +36,24 @@
 - Fixed: an agent whose program exited in the middle of its turn (after "API Error: Connection lost mid-response") stayed
   "working" with nothing for `retry` to send. It is now a real failure, retried by itself when its last words are a
   passing provider error.
+
 ### The Coordinator
 
 - A request that continues a task is a follow-up of it: `add … --follow-up <id>` keeps the link (`details` shows it)
   and hands the new task's agent that task's change, pull request or branch, closing note and review, to keep to that
   scope. The Coordinator asks you first when it is not sure which task, or how far
   ([continuing earlier work](docs/coordinator.md#continuing-earlier-work)).
+
+### Models and routing
+
+- A catalog of models, `~/.herdr-board/models.toml` (a built-in example until it exists): named entries such as
+  `leve`, `padrao`, `pesado`, each checked like `worker.agent`. `allow.agents` refuses any program not on its list.
+- Routing per task: `add`/`delegate --route <entry> --route.reason "…"`, `route.mode` (`none` or `coordinator`),
+  `route.default` for tasks the board starts itself, and escalation along the entry's `escalate_to` after
+  `route.escalateAfter` failed reviews, in the same worktree. A model you name yourself always wins; plans and reviews
+  are never routed.
+- `models catalog` and `models stats [--since 30d]`: tokens, cost, failed reviews and escalations per entry
+  ([catalog and routing](docs/models.md#catalog-and-routing)).
 
 ### Research
 

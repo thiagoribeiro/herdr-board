@@ -2,7 +2,7 @@
 //! while it is `you`. The pipeline asks the setting when a task turns green; this is the housekeeping pass's part, for
 //! a setting changed while a task already waits.
 use super::old_holds::lift_old_holds;
-use super::shared::approval_message;
+use super::shared::approval_message_with;
 use crate::clock::now;
 use crate::flow;
 use crate::gate;
@@ -44,8 +44,13 @@ pub fn auto_merge_pass(tasks: &[Obj], socket: &str) {
 pub fn called_off(g: &mut Guard) -> bool {
     let Ok(cur) = g.check() else { return false };
     if !cur.at("mergeIntent").b("auto") || by_itself(&cur) { return false; }
-    if let Ok(t) = g.set(|t| { t.put("stage", "approval"); t.put("autoMerge", false); t.put("autoMergeLocal", false); t.put("mergeIntent", Value::Null); t.put("requireApproval", false); t.put("since", now()); let m = approval_message(t); t.put("msg", m); }) { flow::sidebar::tell_sidebar(&t); }
+    if let Ok(t) = g.set(|t| back_to_you(t, "")) { flow::sidebar::tell_sidebar(&t); }
     true
+}
+/// The merge that was on its way is called off and the task waits for your yes again. `note`: said after the question.
+pub fn back_to_you(t: &mut Task, note: &str) {
+    t.put("stage", "approval"); t.put("autoMerge", false); t.put("autoMergeLocal", false); t.put("mergeIntent", Value::Null); t.put("requireApproval", false); t.put("since", now());
+    let m = approval_message_with(t, note); t.put("msg", m);
 }
 fn start(id: &str) {
     let mut go = false;
@@ -66,8 +71,7 @@ fn hold(seen: &Task) {
     if !seen.b("autoMergeLocal") && flow::git::gh(&["pr", "merge", &flow::git::pr_number(seen.s("pr")), "--disable-auto"], &folder_of(seen.s("id")), 60000).status != 0 { return; }
     let Ok(t) = update(seen.s("id"), |t| {
         if runner_alive(t) || t.s("stage") != "merging" || !t.at("mergeIntent").b("auto") || by_itself(t) { return Ok(Change::Keep); }
-        t.put("stage", "approval"); t.put("autoMerge", false); t.put("autoMergeLocal", false); t.put("mergeIntent", Value::Null); t.put("requireApproval", false); t.put("since", now());
-        let m = approval_message(t); t.put("msg", m);
+        back_to_you(t, "");
         Ok(Change::Write)
     }) else { return };
     if t.s("stage") == "approval" { flow::sidebar::tell_sidebar(&t); }

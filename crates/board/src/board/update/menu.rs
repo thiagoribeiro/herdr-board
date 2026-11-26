@@ -23,6 +23,7 @@ pub fn label(s: &State, k: K, r: Option<&Obj>) -> String {
         K::SendBack => "send it back: tell the agent to fix it, or to continue".into(),
         K::Delegate => if r.is_some_and(|r| !r.b("archivedAt")) { "put an agent on this task".into() } else { String::new() },
         K::NextAttempt => if r.map(|r| choosing(s, r)).unwrap_or(false) { "move to this task's next attempt".into() } else { String::new() },
+        K::NextNeeds => "the next task that needs you: answer it".into(),
         K::Stop => match r { None => "stop the agent, or remove the task".into(), Some(r) if r.s("stage") == "progress" => "put this task back in to do".into(), Some(r) if running(r) => "stop this task's agent".into(), _ => "remove this task".into() },
         K::Archive => match (r, super::archive_project::says(s)) {
             (None, w) if !w.is_empty() => if s.archive_view { format!("{w}, with its tasks as they were") } else { "archive this project with its tasks (after a yes when one works, waits or is to do)".into() },
@@ -30,6 +31,7 @@ pub fn label(s: &State, k: K, r: Option<&Obj>) -> String {
         },
         K::Pin => super::pinned::menu_label(s, r),
         K::OpenLink => r.and_then(super::link::of).map(|(what, _)| format!("open its {what} in the browser")).unwrap_or_default(),
+        K::Diff => if r.is_some() { "its change in your diff tool, beside the board".into() } else { String::new() },
         K::Settings => match (&s.editing, r) {
             (Some(e), _) if e.whose.mine() => "back from your settings".into(),
             (Some(_), _) => "back from this task's settings".into(),

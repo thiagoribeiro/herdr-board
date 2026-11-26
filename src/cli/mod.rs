@@ -8,7 +8,6 @@ pub mod economy;
 pub mod evaluate;
 pub mod help;
 pub mod pins;
-pub mod status;
 pub mod tasks;
 
 use crate::err::Res;
@@ -89,6 +88,8 @@ fn run(cmd: &str, a: &Args) -> Res<i32> {
             return Ok(crate::jobs::run_job(&pos(1), &pos(2), &extra));
         }
         "open" => { crate::board::place::show(None, false); return Ok(0); }
+        // Started by the startup hook: the board open once, never toggled (board/run/ensure.rs).
+        "ensure-open" => return Ok(crate::board::run::ensure::at_startup()),
         // Into the Coordinator's chat: herdr moves to its real pane, as for any agent. No board in between.
         "open-coordinator" => { if let Err(e) = crate::coordinator::look::go_in(&crate::herdr::cli::current_socket(), 30000) { eprintln!("{}", e.msg); return Ok(1); } return Ok(0); }
         "approve-current" => { approve_current(); return Ok(0); }

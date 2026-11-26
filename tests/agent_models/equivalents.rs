@@ -54,6 +54,15 @@ fn malformed_cross_family_missing_and_self_edges_are_not_eligible() {
 }
 
 #[test]
+fn native_model_unavailability_errors_use_the_same_classification_as_the_failure_report() {
+    for error in ["model_not_found", "Unknown model sonnet", "Model sonnet is not available", "Model sonnet doesn't exist"] {
+        assert!(sw::agents::model_refused::read("claude", error).is_some(), "{error}");
+        assert!(equivalents::unavailable(error, false, false), "{error}");
+    }
+    assert!(!equivalents::unavailable("Model is not allowed by content policy", false, false));
+}
+
+#[test]
 fn counterparts_only_handle_availability_and_explicit_none_keeps_them_off() {
     let w = world_with(Opts { repo: true, settings: json!({ "fallback.corresponding": true }), ..Default::default() }); pairs();
     let id = w.add("Task");
