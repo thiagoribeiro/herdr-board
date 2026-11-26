@@ -29,7 +29,7 @@ fn refused(what: &str, rule: &str) -> Res<Option<Co>> { no(format!("Refused in a
 pub fn guard(cmd: &str, pos: &[String], flags: &Obj, agent: Option<(&Obj, &str)>) -> Res<Option<Co>> {
     // Batch dispatches the ordinary command for every item, each through this guard in the original caller's turn.
     if cmd == "batch" { return Ok(None); }
-    let catalog_write = cmd == "models" && sub(pos) == "catalog" && flags.b("init");
+    let catalog_write = cmd == "models" && sub(pos) == "catalog" && (flags.b("init") || flags.has("import"));
     if catalog_write && agent.is_some() { return no("Only the human may initialize the model catalog and its correspondence policy.".into()); }
     if let Some((t, role)) = agent {
         if switches(cmd, pos) { return no(format!("You are taken as {}'s {role}. A task's {role} can never switch autopilot or change a coordinator's settings or shared budgets: only the human does, by a key, a command of theirs, or by telling a coordinator.", t.s("id"))); }

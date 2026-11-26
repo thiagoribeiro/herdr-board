@@ -89,3 +89,17 @@ fn the_correspondence_profile_is_optional_and_existing_catalogs_cannot_be_overwr
     assert!(!j.b("validatedQuality")); assert!(text.contains("routine_codex"));
     assert!(sw::agents::models::equivalents_say::command("claude").is_err());
 }
+
+#[test]
+fn catalog_import_validates_before_replacing_and_keeps_the_previous_custom_catalog() {
+    let w = world(); pairs();
+    let input = w.base.join("catalog.toml");
+    std::fs::write(&input, "[[entry]]\nname='broken'\nagent='invalid'\n").unwrap();
+    assert!(sw::agents::models::catalog_say::import(&input).is_err());
+    assert_eq!(read(&catalog::path()), PAIRS);
+    let changed = PAIRS.replace("effort = \"high\"", "effort = \"medium\"");
+    std::fs::write(&input, &changed).unwrap();
+    sw::agents::models::catalog_say::import(&input).unwrap();
+    assert_eq!(read(&catalog::path()), changed);
+    assert_eq!(read(&catalog::path().with_extension("previous.toml")), PAIRS);
+}

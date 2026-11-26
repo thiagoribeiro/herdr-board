@@ -181,7 +181,12 @@ pub fn command(cmd: &str, a: &Args) -> Res<(Value, String)> {
             settings_command(cmd, pos, &w, if pos.len() > 2 { Some(json!(rest(2))) } else { None })?
         }
         "models" if pos.get(1).map(|s| s.as_str()) == Some("catalog") => {
-            if let Some(profile) = flag("profile") { if !flags.b("init") { crate::fail!("--profile requires --init; an existing catalog is never overwritten"); } crate::agents::models::catalog_say::init_profile(&profile)? }
+            if flags.has("import") {
+                if flags.b("init") || flags.has("profile") { crate::fail!("--import cannot be combined with --init or --profile"); }
+                let file = flag("import").filter(|s| !s.is_empty()).ok_or("--import needs a TOML file")?;
+                crate::agents::models::catalog_say::import(std::path::Path::new(&file))?
+            }
+            else if let Some(profile) = flag("profile") { if !flags.b("init") { crate::fail!("--profile requires --init; an existing catalog is never overwritten"); } crate::agents::models::catalog_say::init_profile(&profile)? }
             else { crate::agents::models::catalog_say::catalog_command(flags.b("init"))? }
         },
         "models" if pos.get(1).map(|s| s.as_str()) == Some("equivalents") => crate::agents::models::equivalents_say::command(&pos.get(2).cloned().unwrap_or_default())?,

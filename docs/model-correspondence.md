@@ -35,6 +35,10 @@ prompt and does not guarantee that its service is healthy or its subscription ha
 
 ## Declaring a pair
 
+For an existing custom catalog, edit a copy outside the board home and apply it with
+`herdr-board models catalog --import /path/to/models.toml`. Import validates every entry before replacing the file
+and keeps its prior contents in `models.previous.toml`. Task agents and autopilot cannot initialize or import policy.
+
 `models.toml` keeps each model, its effort and its intended uses in its own `[[entry]]`. Add:
 
 ```toml
@@ -93,7 +97,6 @@ evidence; it does not copy another program's private session state or hidden rea
 `reasonType: availability`, `correspondingEntry` and `family`. Failed candidates do not replace the previous task's
 identity; exhausted peers stop instead of looping. A new delegation begins on the primary again.
 
-Coordinators, standalone planners and tool-free helpers keep their existing lifecycle. This setting does not
-automatically replay a coordinator's partly executed request or start an interactive coding agent as a summarizer.
-The matrix can be inspected for choosing those roles, but automatic cross-program coordinator continuity requires
-its own recovery protocol and is not provided by this task fallback policy.
+Coordinators use the separate [coordinator fallback](coordinator-fallback.md) setting and recovery protocol.
+Standalone planners and tool-free helpers keep their existing lifecycle. This task policy does not start an
+interactive coding agent as a summarizer.

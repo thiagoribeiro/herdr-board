@@ -13,6 +13,18 @@ use crate::store::settings::values::models_fit;
 pub fn init() -> Res<(Value, String)> {
     init_profile("")
 }
+/// Replace the human's catalog through a validated command, keeping its prior contents beside it.
+pub fn import(file: &std::path::Path) -> Res<(Value, String)> {
+    let source = std::fs::read_to_string(file)?;
+    let c = super::catalog::parse(&source);
+    if !c.problems.is_empty() { crate::fail!("Catalog was not imported: {}", c.problems.join("; ")); }
+    for e in &c.entries { models_fit("worker.agent", &json!(e.agent))?; }
+    let p = path();
+    let backup = p.with_extension("previous.toml");
+    if let Ok(previous) = std::fs::read(&p) { crate::store::files::write_atomic(&backup, &previous)?; }
+    crate::store::files::write_atomic(&p, source.as_bytes())?;
+    Ok((json!({ "file": p.display().to_string(), "backup": backup.display().to_string() }), format!("Imported catalog into {}; previous contents kept in {}.", tilde(&p.display().to_string()), tilde(&backup.display().to_string()))))
+}
 pub fn init_profile(profile: &str) -> Res<(Value, String)> {
     let source = match profile { "" | "default" => EXAMPLE, "corresponding" => include_str!("models.corresponding.toml"), _ => crate::fail!("Catalog profile must be default or corresponding") };
     let p = path();

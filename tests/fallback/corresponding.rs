@@ -86,5 +86,6 @@ fn task_agents_cannot_initialize_or_replace_the_correspondence_policy() {
     let id = w.add("Worker"); delegate(&id); let t = settle(&id);
     common::pilot::in_pane(&w, t.at("link").s("pane"));
     assert!(common::pilot::refused(&["models", "catalog", "--init", "--profile", "corresponding"]).contains("human"));
+    assert!(common::pilot::refused(&["models", "catalog", "--import", "/tmp/policy.toml"]).contains("human"));
     common::pilot::in_pane(&w, "");
 }
