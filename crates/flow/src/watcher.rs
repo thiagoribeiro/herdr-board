@@ -35,7 +35,9 @@ pub(crate) fn run_helper(cmd: OneShot, extra_env: &[(&str, &str)], done: impl Fn
     use std::io::{Read, Write};
     use std::process::{Command, Stdio};
     user_env();
-    let mut c = Command::new(&cmd.command);
+    let executable = crate::agents::kinds::all().find(|a| crate::agents::kinds::program(a.name) == cmd.command)
+        .map(|a| crate::agents::installed::executable(a.name)).unwrap_or_else(|| std::path::PathBuf::from(&cmd.command));
+    let mut c = Command::new(executable);
     c.args(&cmd.args).current_dir(data_dir()).stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped());
     let path = format!("{}:{}", shim().parent().map(|p| p.display().to_string()).unwrap_or_default(), std::env::var("PATH").unwrap_or_default());
     c.env("PATH", path).env("HERDR_BOARD_NO_KEEPER", "1");

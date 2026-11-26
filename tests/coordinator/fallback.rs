@@ -44,6 +44,9 @@ fn exhausted_peers_stop_once_and_new_conversations_can_use_the_primary_again() {
     assert_eq!(start_kinds(&w), vec!["claude", "codex"]); assert!(c.b("fallbackExhausted"), "{c:?}");
     for _ in 0..3 { pump::tick(&co); drain(); }
     assert_eq!(start_kinds(&w).len(), 2);
+    requests::restart(&co).unwrap(); drain();
+    assert!(!state::get(&co).b("fallbackExhausted"));
+    assert_eq!(state::get(&co).at("run").s("kind"), "codex", "restart keeps its current conversation");
     requests::fresh(None, &co).unwrap(); drain();
     assert_eq!(state::get(&co).at("run").s("kind"), "claude");
     assert!(!state::get(&co).b("fallbackExhausted"));

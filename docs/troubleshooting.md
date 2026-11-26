@@ -42,6 +42,10 @@ leftover while its clean-up is still to come, or when `workspace.cleanup` is `fa
 
 ## An agent could not start
 
+If an installed program is reported missing, run `herdr-board doctor --refresh` to discard the ten-minute version
+cache and probe again. Background processes also look in the usual user install folders and the login shell's PATH
+when the agent cannot be started from their inherited PATH, including a wrapper with a missing interpreter.
+
 The row says `Could not start: …` with the reason, for example `codex is not logged in` or `sol-6.1 can't be used with your ChatGPT sign-in`. Fix what it says, then delegate again.
 
 The full table of reasons and fixes: [when an agent could not start](could-not-start.md).

@@ -26,5 +26,8 @@ The board does not itself repeat task operations. Each program/model is tried on
 lists cannot loop. With no eligible candidate it leaves the queue intact and names the actual failure. A normal
 answer, permission dialog, content refusal, context limit, explicit stop or shared-budget stop does not trigger it.
 
+After repairing a login or installation, `coordinator restart` clears the exhausted-candidate marker and retries
+the current conversation. `coordinator new` starts on the primary instead. Queued messages remain queued in both.
+
 Workers and reviewers have their own [corresponding-model policy](model-correspondence.md). Delivery summaries fall
 back to the original closing message when the tool-free helper is unavailable; task results remain accessible.

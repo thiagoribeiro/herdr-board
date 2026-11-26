@@ -59,11 +59,13 @@ pub fn listed(k: &str, fresh: bool) -> Listing {
     // The tests never run a real program: they write models.json themselves.
     if crate::util::env_set("HERDR_BOARD_NO_MODEL_LIST") { return kept(had); }
     // Its app-server first: the names of the account it is signed in with. Its list command when that cannot be asked.
-    let served = if a.models.server.is_empty() { Err(String::new()) } else { super::server::ask(program(k), a.models.server) };
+    let executable = super::super::installed::executable(k);
+    let executable = executable.to_string_lossy();
+    let served = if a.models.server.is_empty() { Err(String::new()) } else { super::server::ask(&executable, a.models.server) };
     let names = match served {
         Ok(Some(n)) => n,
         Ok(None) => return Listing::Unchecked,
-        Err(_) => match run(program(k), a.models.list) { Ok(Some(out)) => read(a.models.read, &out), Ok(None) => return Listing::Unchecked, Err(why) => return Listing::Failed(why) },
+        Err(_) => match run(&executable, a.models.list) { Ok(Some(out)) => read(a.models.read, &out), Ok(None) => return Listing::Unchecked, Err(why) => return Listing::Failed(why) },
     };
     if names.taken.is_empty() { return Listing::Failed(format!("`{}` listed no models", list_command(k))); }
     let mut all = read_obj(&file()).unwrap_or_default();

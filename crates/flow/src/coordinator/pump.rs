@@ -160,7 +160,7 @@ fn run_pump(co: &Co, taken: &mut HashSet<String>) -> Res<()> {
                 nowhere(c);
                 if w.s("what") == "handover" { super::fallback::apply(c, &w); }
                 if w.s("what") == "new" { for (k, v) in obj(json!({ "run": null, "pick": w.at("pick"), "session": null, "transcript": null, "seen": null, "intro": false, "last": "", "where": [], "mark": null, "contextTokens": null, "contextSession": null, "observedModel": null })) { c.insert(k, v); } }
-                if w.s("what") == "new" { c.del("fallbackTried"); c.del("fallbackExhausted"); }
+                if ["new", "restart"].contains(&w.s("what")) { c.del("fallbackTried"); c.del("fallbackExhausted"); }
                 true
             })?;
             if !applied { continue; }
