@@ -5,6 +5,8 @@
 pub mod allow;
 pub mod catalog;
 pub mod catalog_say;
+pub mod equivalents;
+pub mod equivalents_say;
 pub mod listed;
 pub mod say;
 pub mod server;

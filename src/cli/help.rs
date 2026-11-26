@@ -14,6 +14,11 @@ pub const HELP: &str = r#"herdr-board: a work board for herdr
   herdr-board status [ID ...] [--all] [--repo NAME] [--json]  current owner, next action, blockers and cached result; no model call
   herdr-board summary [ID ...] [--repo NAME] [--json]        cached delivery summaries and original evidence
   herdr-board usage [ID ...] [--repo NAME] [--json]          measured new/cache/output tokens, independently of limits
+  herdr-board budget [status] [--json]                    shared observed use, reservations and uncertain outcomes
+  herdr-board budget settle OWNER --used TOKENS [--ended] reconcile usage; --ended confirms a lost call has ended
+  herdr-board evaluate cases [--json]                     initial quality, usage and friction scenarios
+  herdr-board evaluate record ID --assessment FILE [--json]  print an assessed trial; never starts an agent
+  herdr-board evaluate compare BASELINE CANDIDATE [--json]   compare paired records (docs/agent-evaluation.md)
   herdr-board batch <delegate|approve|stop|retry|review|fix|archive|restore> ID ... [--request-id ID] [--json]
                                       per-task outcomes in one call; a repeated request-id reuses its receipt without repeating work
   herdr-board report <id> --state idle|working|blocked|done|error [--kind question|permission|auth] [--msg TEXT] [--title TEXT]
@@ -68,6 +73,8 @@ pub const HELP: &str = r#"herdr-board: a work board for herdr
   herdr-board models catalog [--init]       the catalog of models a task is routed to (~/.herdr-board/models.toml), each
                                       entry with its cost, what it is good for and how it fared; --init writes the example
   herdr-board models stats [--since 30d]    routed tasks by entry: tokens, cost, reviews failed, escalations
+  herdr-board models equivalents [ENTRY]   declared same-family availability alternatives; no model is started
+  herdr-board models catalog --init --profile corresponding   initialize proposed Claude/Codex pairs, without overwriting
   herdr-board automations [add|show|change|on|off|run|firings|remove] …
                                       tasks made on a schedule or when something happens on the board; each firing adds
                                       a task and puts an agent on it. `herdr-board automations help` says how

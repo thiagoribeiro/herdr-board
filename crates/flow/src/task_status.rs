@@ -9,7 +9,7 @@ pub fn snapshot(t: &Obj) -> Value {
         "ageMs": (crate::clock::now() - if t.b("stageSince") { t.i("stageSince") } else { t.i("at") }).max(0), "observedAt": crate::clock::now(),
         "availability": if t.at("live").is_object() { json!({ "status": t.at("live").at("status"), "down": t.at("live").b("down"), "gone": t.at("live").b("gone"), "away": t.at("live").at("away") }) } else { json!("saved") },
         "pr": t.at("pr"), "head": t.at("prHead"), "waiting": t.at("waiting"),
-        "blocked": t.at("blocked"), "syncBlocked": t.at("syncBlocked"), "failure": if t.b("failure") { json!({ "kind": t.at("failure").at("kind"), "reason": crate::store::tasks::one_line(&text(t.at("failure")), 400) }) } else { Value::Null },
+        "blocked": t.at("blocked"), "budgetStop": t.at("budgetStop"), "budgetWait": t.at("budgetWait"), "syncBlocked": t.at("syncBlocked"), "failure": if t.b("failure") { json!({ "kind": t.at("failure").at("kind"), "reason": crate::store::tasks::one_line(&text(t.at("failure")), 400) }) } else { Value::Null },
         "usage": t.at("spent").at("metrics"), "summary": crate::digest::cached(t) });
     if let Some(r) = current_review(t) {
         v["review"] = json!({ "head": r.at("head"), "meets": r.at("meets"), "text": crate::store::tasks::one_line(r.s("text"), 400),

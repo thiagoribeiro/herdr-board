@@ -1,9 +1,9 @@
 //! What a task has used: the tokens of every conversation it had (its agent's, each reviewer's, each new chat's), added
-//! up on the task. Each conversation file has a counter of its own (agents/read_tokens.rs) that reads on from where it
-//! stopped, kept on the task as `spent.files[<file>]`; `spent.total` is their sum. While no limit is said, the
-//! conversations are only written down (`spent.owed`) and read when one is. `spent.base` is where the count of
+//! up on the task, including native subagents. Each conversation file has an incremental counter, retained under
+//! `spent.files[<file>]`; shared Claude replies count once across the family. Missing conversations stay owed.
+//! `spent.base` is where the count of
 //! `limit.tokens` starts: 0, then the total at the moment you said to carry on after the limit stopped the task.
-use crate::agents::{adapter, kinds::kind, read_tokens};
+use crate::agents::{adapter, kinds::kind, token_tree};
 use crate::json::*;
 use crate::store::repos::cwd_of;
 use crate::store::tasks::{get, update_wait, Change, Task};
@@ -30,50 +30,38 @@ pub fn counted(t: &Task, role: &str) -> Option<Obj> {
     let spent = t.o("spent").cloned().unwrap_or_default();
     let mut files = spent.o("files").cloned().unwrap_or_default();
     let mut changed = false;
+    let mut owed = spent.arr("owed").to_vec();
+    if let Some(e) = known(t, role) { if !owed.iter().any(|o| same(o, &e)) { owed.push(e); } }
+    // Keep reading ended reviews and earlier workers: their children may save their last usage later.
+    let roots: Vec<Value> = files.iter().filter(|(_, f)| f.b("kind") && !f.b("parent"))
+        .map(|(path, f)| json!({ "kind": f.at("kind"), "session": f.at("session"), "file": path })).collect();
+    let mut read_files = std::collections::HashSet::new();
     let mut read = |e: Option<&Value>| {
         let Some(e) = e else { return };
         if !can_count(e.s("kind")) { return; }
-        let Some(file) = file_of(e) else { return };
-        let key = file.display().to_string();
-        let was = files.get(&key).cloned().unwrap_or(Value::Null);
-        if let Some(now) = read_tokens::tokens(e.s("kind"), &file, &was) { if was.is_null() || was.at("at") != now.at("at") || was.at("n") != now.at("n") { files.insert(key, now); changed = true; } }
+        let Some(file) = file_of(e) else {
+            if let Some(counter) = files.get_mut(e.s("file")) {
+                if !counter.b("unavailable") { counter["unavailable"] = json!(true); changed = true; }
+            }
+            return;
+        };
+        if !read_files.insert(file.clone()) { return; }
+        changed |= token_tree::count(e.s("kind"), &file, e.s("session"), &mut files);
     };
-    let owed = spent.arr("owed").to_vec();
-    let unresolved: Vec<Value> = owed.iter().filter(|e| file_of(e).is_none()).cloned().collect();
-    for e in &owed { read(Some(e)); }
-    read(known(t, role).as_ref());
-    if !changed && owed.is_empty() { return None; }
+    let unresolved: Vec<Value> = owed.iter().filter(|e| !can_count(e.s("kind")) || file_of(e).is_none()).cloned().collect();
+    for e in roots.iter().chain(&owed) { read(Some(e)); }
+    if !changed && unresolved == spent.arr("owed") { return None; }
     let mut rest = spent.clone();
     if unresolved.is_empty() { rest.del("owed"); } else { rest.put("owed", unresolved); }
-    let total: f64 = files.values().map(|f| f.f("n")).sum();
+    let summary = token_tree::totals(&files);
     rest.put("files", files);
-    rest.put("total", total);
-    let mut metrics = json!({});
-    for f in rest.at("files").as_object().into_iter().flat_map(|m| m.values()) {
-        for k in ["input", "cacheWrite", "cacheRead", "output", "requests"] { metrics[k] = json!(metrics.f(k) + f.at("metrics").f(k)); }
-    }
-    rest.put("metrics", metrics);
-    let partial = rest.at("files").as_object().is_some_and(|m| m.values().any(|f| f.b("partial")));
-    rest.put("partial", partial);
+    for k in ["total", "metrics", "sessions", "subagents"] { rest.put(k, summary.at(k).clone()); }
+    rest.put("partial", summary.b("partial") || !rest.arr("owed").is_empty());
     Some(rest)
 }
-/// Count a role's conversation onto its task. Returns the task as it now is. While no limit is said, the conversation
-/// is only written down as owed.
+/// Count a role's conversation onto its task independently of limits. Missing or unsupported sessions remain owed.
 pub fn count(id: &str, role: &str, wait_ms: i64) -> Option<Task> {
-    let seen = get(id)?;
     let r = (|| -> crate::err::Res<Task> {
-        if known(&seen, role).as_ref().and_then(file_of).is_none() {
-            let Some(e) = known(&seen, role) else { return Ok(seen.clone()) };
-            if !can_count(e.s("kind")) || seen.at("spent").arr("owed").iter().any(|o| same(o, &e)) { return Ok(seen.clone()); }
-            let role = role.to_string();
-            return update_wait(id, wait_ms, move |t| {
-                let Some(now) = known(t, &role) else { return Ok(Change::Keep) };
-                if t.at("spent").arr("owed").iter().any(|o| same(o, &now)) { return Ok(Change::Keep); }
-                let mut owed = t.at("spent").arr("owed").to_vec(); owed.push(now);
-                t.obj_mut("spent").put("owed", owed);
-                Ok(Change::Write)
-            });
-        }
         let role = role.to_string();
         update_wait(id, wait_ms, move |t| { match counted(t, &role) { Some(s) => { t.put("spent", s); Ok(Change::Write) } None => Ok(Change::Keep) } })
     })();

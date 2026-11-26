@@ -4,6 +4,7 @@ use crate::common;
 use common::*;
 use serde_json::json;
 use sw::json::*;
+mod budget;
 
 fn at_work(w: &World, settings: serde_json::Value) -> String {
     w.script(json!({ "worker": [{ "status": "working" }, { "status": "working" }, { "status": "working" }, { "status": "working" }, { "status": "working" }, { "status": "working" }], "reviewer": [{ "verdict": { "meets": true, "text": "Looked at it.", "findings": [] } }] }));

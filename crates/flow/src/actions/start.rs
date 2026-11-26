@@ -147,7 +147,11 @@ pub fn start_queued(socket: &str) -> Vec<String> {
         for w in waiting {
             if busy >= max { break; }
             if crate::leftovers::room::still_waiting(w) { continue; } // no room on the disk yet: no runner for it
-            let t = update(w.s("id"), |t| { if t.s("stage") != "queued" { return Ok(Change::Keep); } crate::hook::ask_start(t); t.put("msg", ""); Ok(Change::Write) })?;
+            if let Err(e) = crate::budget::admission::task(w, "agent") {
+                let _ = update(w.s("id"), |t| { if t.s("stage") != "queued" { return Ok(Change::Keep); } t.put("budgetWait", json!({ "at": now(), "reason": e.msg })); t.put("msg", format!("Shared budget: {}", e.msg)); Ok(Change::Write) });
+                continue;
+            }
+            let t = update(w.s("id"), |t| { if t.s("stage") != "queued" { return Ok(Change::Keep); } crate::hook::ask_start(t); t.del("budgetWait"); t.put("msg", ""); Ok(Change::Write) })?;
             if t.s("stage") != "starting" { continue; }
             busy += 1;
             started.push(t.t("id"));

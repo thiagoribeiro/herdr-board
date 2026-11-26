@@ -18,6 +18,7 @@ static COUNTED_AT: LazyLock<Mutex<HashMap<String, i64>>> = LazyLock::new(Default
 fn within(last: Option<i64>, now: i64, span: i64) -> bool { matches!(last, Some(l) if now >= l && now - l < span) }
 /// `rows`: the board's list as this herdr session shows it (flow/live.rs). `carry_on`: what continues a task.
 pub fn limits_tick(rows: &[Obj], now: i64, carry_on: Option<&dyn Fn(&str)>) {
+    crate::budget::runtime::tick(rows, &crate::herdr::cli::current_socket());
     for r in rows {
         let live = r.at("live");
         if r.b("archivedAt") || !crate::flow::task::is_agent_task(r) || !live.is_object() || live.b("away") || live.b("down") { continue; }

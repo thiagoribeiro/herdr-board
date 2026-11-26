@@ -40,6 +40,8 @@ pub fn on_now(t: &Task, setting: &str) -> String {
 pub fn fresh_list(t: &mut Task) {
     t.put("tried", json!([]));
     t.put("reviewerOn", Value::Null);
+    t.del("reviewerEquivalent");
+    if !t.b("on") { t.del("workerEquivalent"); }
     if t.at("fallbacks").b("worker") || t.at("fallbacks").b("reviewerLeft") {
         let f = t.obj_mut("fallbacks"); f.del("worker"); f.del("reviewerLeft");
     }

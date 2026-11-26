@@ -270,6 +270,7 @@ pub fn details(id: &str) -> Res<Value> {
         "stillRunning": if t.b("stillRunning") { t.at("stillRunning").clone() } else { Value::Null }, // what its clean-up or archive left for you to end
         "inUse": if t.at("tidy").b("inUse") { t.at("tidy").at("inUse").clone() } else { Value::Null }, // what keeps its space in use, every thing
         "limits": limits_detail(&t, now()),
+        "budget": crate::budget::view::snapshot(&crate::budget::admission::owner(&t), t.s("repo")), "budgetStop": t.at("budgetStop"),
         "addedBy": crate::autopilot::history::added_by(&t), // you, an automation, a coordinator's autopilot, or which coordinator you asked
     }));
     // Waiting in the queue: its place, and in words ("waiting for a free slot, Q#2", "waiting for disk space, Q#1").

@@ -86,6 +86,27 @@ Summary helper usage is recorded when the program returns it. Monetary cost is u
 cache reads must not be presented as costing the same as fresh input. Concurrent inputs can share a model turn, so
 per-request measurements are observed deltas rather than exact provider billing allocations.
 
+Native Claude and Codex child sessions are included, recursively, for workers, reviewers and coordinators. Saved
+families remain discoverable after a worker switches or a review closes, so late child usage is picked up. Shared
+Claude reply ids count once; copied Codex usage predating a child session's creation establishes its baseline rather
+than new spending. Codex child identity and parentage are checked against session metadata. Missing child sessions
+and unsupported or unavailable task transcripts make usage partial. `usage` includes session/subagent counts and
+pending root sessions; `coordinator usage` includes a coverage object. Coverage describes known supported transcript
+evidence, not arbitrary model calls launched through shell scripts or an external tool.
+
+Context hints use the last request's input, including cache, for Claude, Codex and pi. Cumulative billable usage is
+never used as the current context size. A new conversation cannot inherit the previous conversation's context hint.
+An autopilot coordinator may save memory and checkpoint its own conversation, naming its level with `--machine` or
+`--project REPO` as needed; it cannot replace another coordinator's memory or change settings through this permission.
+
+The opt-in [evaluation suite](agent-evaluation.md) records real-task acceptance criteria, independent evidence,
+interruptions and paired usage. It starts no models. Tests with simulated agents remain regression checks for the
+board's mechanisms and are not measurements of real model quality or economy.
+
+[Shared budgets](budgets.md) reserve local machine/project allowance across coordinators, task families and measured
+helpers. The coordinator receives a compact budget snapshot with requests. A checkpoint preserves its cumulative
+account; unknown consumption holds reservations until final evidence or explicit human reconciliation.
+
 Validate clear actions, multi-project selection, ambiguous references, repeated requests, delayed events/results,
 restarts, failed review and unchanged cache hits. A reduction is a gain only if original requirements, authorization,
 independent review and current evidence remain correct. No status polling loop should be created by the coordinator;

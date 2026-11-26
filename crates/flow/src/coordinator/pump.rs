@@ -153,7 +153,7 @@ fn run_pump(co: &Co, taken: &mut HashSet<String>) -> Res<()> {
                 if c.at("want").at("at") == w.at("at") { c.put("want", Value::Null); }
                 if w.s("what") == "open" { return true; }
                 nowhere(c);
-                if w.s("what") == "new" { for (k, v) in obj(json!({ "run": null, "pick": w.at("pick"), "session": null, "transcript": null, "seen": null, "intro": false, "last": "", "where": [], "mark": null })) { c.insert(k, v); } }
+                if w.s("what") == "new" { for (k, v) in obj(json!({ "run": null, "pick": w.at("pick"), "session": null, "transcript": null, "seen": null, "intro": false, "last": "", "where": [], "mark": null, "contextTokens": null, "contextSession": null, "observedModel": null })) { c.insert(k, v); } }
                 true
             })?;
             // Stopped is stopped: words that were still waiting stay waiting. Only something said after the stop starts it again.

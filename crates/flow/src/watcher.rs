@@ -122,15 +122,25 @@ pub fn watch_tick_with(tasks: &[Obj], now_ms: i64, load: Option<f64>, run: Run) 
         batch.push((i, role.into(), lines, words));
     }
     if batch.is_empty() { return; }
+    // A capped helper call belongs to one project. Mixing projects would conceal its project-level spending.
+    let repo = if crate::budget::config::any_enabled() { tasks[batch[0].0].t("repo") } else { String::new() };
+    if crate::budget::config::any_enabled() { batch.retain(|b| tasks[b.0].s("repo") == repo); }
     let looks: Vec<prompt::Look> = batch.iter().map(|b| prompt::Look { t: &tasks[b.0], role: &b.1, lines: b.2.clone() }).collect();
-    let Some(cmd) = helper_command(&prompt::watcher_prompt(&looks, now_ms), prompt::SYSTEM, !p.plain) else { return };
+    let Some(mut cmd) = helper_command(&prompt::watcher_prompt(&looks, now_ms), prompt::SYSTEM, !p.plain) else { return };
     if !one::take_turn(now_ms) { return; } // another process's call is under way: this one waits its turn
+    let kind = agent_of(setting("watcher.agent", None).as_str().unwrap_or("")).kind;
+    let claim = match crate::budget::helpers::begin("watcher", &repo, &kind) { Ok(c) => c, Err(_) => {
+        for b in &batch { if let Some(w) = p.looks.get_mut(tasks[b.0].s("id")) { w.at = now_ms; } }
+        one::give_turn(); return;
+    } };
+    if claim.is_some() { cmd.args.extend(["--output-format".into(), "json".into()]); }
     for b in &batch { if let Some(w) = p.looks.get_mut(tasks[b.0].s("id")) { w.at = now_ms; w.words = Some(b.3.clone()); } }
     p.call_at = now_ms; p.running = true;
     let jobs: Vec<(String, String, String, String)> = batch.iter().map(|b| (tasks[b.0].t("id"), b.1.clone(), tasks[b.0].t("stage"), turn_of(&tasks[b.0]))).collect();
     drop(p);
     // "Only the watcher should have autocompact 100k."
     run(cmd, &[("CLAUDE_CODE_AUTO_COMPACT_WINDOW", "100000")], Box::new(move |code, out, err| {
+        let out = crate::budget::helpers::finish(claim, &out);
         let mut p = PACE.lock().unwrap();
         p.running = false; one::give_turn();
         let found = prompt::read_answer(&out, jobs.len());

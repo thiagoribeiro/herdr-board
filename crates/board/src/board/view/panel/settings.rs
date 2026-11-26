@@ -59,6 +59,7 @@ pub fn settings(k: &mut Kit, c: &Ctx, r: &Obj) -> Drawn {
     let takes = |name: &str| -> Option<Vec<Option<(String, Vec<String>)>>> { if !backed { return None; } let v = val(name); let who = if v.is_array() { strings(&v).join(", then ") } else { "nobody".into() }; Some(vec![it(format!("{who} · when the {} cannot go on", if name == "worker.fallback" { "agent" } else { "reviewer" }), &[name])]) };
     row("Agent", role("worker", r.s("agent"), r.s("agentVersion")), false, false);
     if let Some(t) = takes("worker.fallback") { row("Takes over", t, false, false); }
+    if val("fallback.corresponding") == json!(true) { row("Correspondents", vec![it("catalog family · only when unavailable · explicit fallback lists win".into(), &["fallback.corresponding"])], false, false); }
     // A plan first: who says yes to it, and who writes it when that is not the working agent.
     let plan_by = sval("plan.approve");
     let planner = agent_of(&sval("plan.agent"));
@@ -90,6 +91,11 @@ pub fn settings(k: &mut Kit, c: &Ctx, r: &Obj) -> Drawn {
     let most = if val("limit.tokens").is_null() { "none".to_string() } else { sval("limit.tokens") };
     let limited = time != "none" || most != "none" || from(&["limit.time", "limit.tokens"]);
     if limited { row("Limits", vec![it(if time != "none" { format!("{time} a run") } else { "no time limit".into() }, &["limit.time"]), it(if most == "none" { "no token limit".into() } else if all.get("limit.tokens").map(|x| x.b("note")).unwrap_or(false) { format!("{most} tokens, not counted") } else { format!("{most} tokens") }, &["limit.tokens"])], false, false); }
+    let budget = snap.at("budget");
+    if budget.is_object() {
+        let cap = |name: &str, v: &Value| v.at("limit").as_u64().map(|n| format!("{name}: {} used · {} reserved · {} limit", tokens(v.f("used")), tokens(v.f("reserved")), tokens(n as f64)));
+        row("Shared budget", vec![cap("machine", budget.at("global")).and_then(|s| it(s, &["budget.tokens"])), cap("project", budget.at("project")).and_then(|s| it(s, &["budget.projectTokens"])), it(budget.t("error"), &[])], true, true);
+    }
     let said = |n: &str| { let v = val(n); if v.is_null() || text(&v) == "none" { String::new() } else { crate::re!(r"\s*\n\s*").replace_all(&say(&v), " / ").into_owned() } };
     if applies("workspace.from") { row("Workspace", vec![it(format!("from {}", match sval("workspace.from").as_str() { "here" => "your checkout".to_string(), "main" | "" => "main".into(), b => b.to_string() }), &["workspace.from"]), if from(&["workspace.branch"]) { it(format!("branch {}", sval("workspace.branch")), &["workspace.branch"]) } else { None }, it(if said("workspace.setup").is_empty() { String::new() } else { format!("set up with {}", said("workspace.setup")) }, &["workspace.setup"]), it(if said("workspace.include").is_empty() { String::new() } else { format!("copies {}", said("workspace.include")) }, &["workspace.include"]), it(if said("workspace.teardown").is_empty() { String::new() } else { format!("torn down with {}", said("workspace.teardown")) }, &["workspace.teardown"]), it(if val("workspace.cleanup") == json!(false) { "kept when done".into() } else { "removed when done".into() }, &["workspace.cleanup"])], false, false); }
     row("Also", vec![if !many { it("one attempt".into(), &["attempts.by", "attempts.pick"]) } else { None }, if !research && !chat { it("not research only".into(), &["research.only"]) } else { None }, if !limited { it("no limits".into(), &["limit.time", "limit.tokens"]) } else { None }, if !backed { it("no fallback".into(), &["worker.fallback", "reviewer.fallback"]) } else { None }, if from(&["stall.after"]) { it(format!("stalled after {}", sval("stall.after")), &["stall.after"]) } else { None }], false, false);

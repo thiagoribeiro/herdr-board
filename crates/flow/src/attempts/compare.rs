@@ -78,6 +78,7 @@ pub fn compare_job(id: &str) {
     let _ = to_pick(id, Some(Value::Object(comparison)), "reviewing");
 }
 fn compare(id: &str, g: &mut Guard, t: &Task) -> Res<Obj> {
+    crate::budget::admission::task(t, "reviewer")?;
     let api = flow::task::h(t);
     let dir = compare_dir(t);
     let file = dir.join("comparison.json");
@@ -146,7 +147,7 @@ fn compare(id: &str, g: &mut Guard, t: &Task) -> Res<Obj> {
         let at_rest = a.as_ref().map(|a| a.s("agent_status") == "idle" || a.s("agent_status") == "done").unwrap_or(false);
         if !sent && at_rest {
             comp_at_send = a.as_ref().map(|a| a.at("completion_seq").clone()).unwrap_or(Value::Null);
-            match crate::submit::hand(&api, &pane, &brief) { Ok(_) => sent = true, Err(e) => if e.code != "agent_blocked" && e.code != "agent_not_ready" { sent = true; } }
+            match crate::submit::hand(&api, &pane, &brief) { Ok(_) => sent = true, Err(e) => { if e.code == "budget" { return err(&e.message); } if e.code != "agent_blocked" && e.code != "agent_not_ready" { sent = true; } } }
         } else if sent && !reads {
             // A program whose conversation the board does not read: herdr saw it finish a turn since the brief, and
             // still no answer 15 seconds later.

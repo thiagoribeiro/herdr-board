@@ -16,11 +16,11 @@ use crate::store::tasks::find;
 const READS: [&str; 8] = ["list", "ls", "show", "details", "models", "status", "summary", "usage"];
 fn sub(pos: &[String]) -> &str { pos.get(1).map(|s| s.as_str()).unwrap_or("") }
 fn reads(cmd: &str, pos: &[String]) -> bool {
-    READS.contains(&cmd) || (cmd == "autopilot" && !["on", "off"].contains(&sub(pos))) || (cmd == "coordinator" && ["where", "status", "context", "usage", "history", "help", ""].contains(&sub(pos)))
+    READS.contains(&cmd) || (cmd == "budget" && ["", "status"].contains(&sub(pos))) || (cmd == "autopilot" && !["on", "off"].contains(&sub(pos))) || (cmd == "coordinator" && ["where", "status", "context", "usage", "history", "help", ""].contains(&sub(pos)))
 }
 /// Does this command switch autopilot, or write a coordinator's setting?
 fn switches(cmd: &str, pos: &[String]) -> bool {
-    (cmd == "coordinator" && ["memory", "checkpoint"].contains(&sub(pos))) || (cmd == "autopilot" && ["on", "off"].contains(&sub(pos))) || (["set", "unset"].contains(&cmd) && pos.get(1).map(|n| n.starts_with("coordinator.") || n.starts_with("autopilot.")).unwrap_or(false))
+    (cmd == "budget" && sub(pos) == "settle") || (cmd == "coordinator" && ["memory", "checkpoint"].contains(&sub(pos))) || (cmd == "autopilot" && ["on", "off"].contains(&sub(pos))) || (["set", "unset"].contains(&cmd) && pos.get(1).map(|n| n.starts_with("coordinator.") || n.starts_with("autopilot.") || n.starts_with("budget.")).unwrap_or(false))
 }
 fn no(msg: String) -> Res<Option<Co>> { Err(crate::err::Error::refused(msg)) }
 fn refused(what: &str, rule: &str) -> Res<Option<Co>> { no(format!("Refused in an autopilot wake: {what}. {rule}")) }
@@ -29,8 +29,10 @@ fn refused(what: &str, rule: &str) -> Res<Option<Co>> { no(format!("Refused in a
 pub fn guard(cmd: &str, pos: &[String], flags: &Obj, agent: Option<(&Obj, &str)>) -> Res<Option<Co>> {
     // Batch dispatches the ordinary command for every item, each through this guard in the original caller's turn.
     if cmd == "batch" { return Ok(None); }
+    let catalog_write = cmd == "models" && sub(pos) == "catalog" && flags.b("init");
+    if catalog_write && agent.is_some() { return no("Only the human may initialize the model catalog and its correspondence policy.".into()); }
     if let Some((t, role)) = agent {
-        if switches(cmd, pos) { return no(format!("You are taken as {}'s {role}. A task's {role} can never switch autopilot or change a coordinator's settings: only the human does, by a key, a command of theirs, or by telling a coordinator.", t.s("id"))); }
+        if switches(cmd, pos) { return no(format!("You are taken as {}'s {role}. A task's {role} can never switch autopilot or change a coordinator's settings or shared budgets: only the human does, by a key, a command of theirs, or by telling a coordinator.", t.s("id"))); }
         // A report with no id is its own task's only for its agent: for anyone else it adds a task (cli/tasks.rs).
         let mine = cmd == "report" && pos.get(1).map(|id| find(id).map(|x| x.s("id") == t.s("id")).unwrap_or(false)).unwrap_or(role == "agent");
         if t.at("autopilot").is_object() && !reads(cmd, pos) && !mine {
@@ -40,12 +42,18 @@ pub fn guard(cmd: &str, pos: &[String], flags: &Obj, agent: Option<(&Obj, &str)>
         return Ok(None);
     }
     let Some(co) = coordinator_caller() else { return Ok(None) };
+    if catalog_write && (agents_turn(&co).is_some() || autopilot_turn(&co)) { return refused("models catalog --init", "The model catalog and its correspondence policy belong to the human."); }
     if agents_turn(&co).is_some() && switches(cmd, pos) { return no("This turn was started by a message from a task's agent or reviewer: it cannot switch autopilot or change a coordinator's settings. Only the human does.".into()); }
     if !autopilot_turn(&co) { return Ok(None); }
     if reads(cmd, pos) { return Ok(Some(co)); } // in an autopilot turn, `list` and `details` say more (history.rs)
     let ap = record(&co);
     if cmd == "autopilot" && sub(pos) == "off" { return Ok(None); }
     if !ap.b("on") { return refused(&format!("{cmd}"), "Autopilot was turned off: this turn may only read the board now."); }
+    if cmd == "coordinator" && ["memory", "checkpoint"].contains(&sub(pos)) {
+        if agents_turn(&co).is_some() { return refused(cmd, "A task's message cannot replace coordinator memory or its conversation."); }
+        if super::command::target(flags) != co { return refused(cmd, "Memory and checkpoints are only for this coordinator's own conversation; name it with --machine or --project when needed."); }
+        return Ok(Some(co));
+    }
     let board = super::limits::board_tasks();
     let id = pos.get(1).cloned().unwrap_or_default();
     // Another machine's task of its own that no board heard lately: known by its record alone, where it stands unknown.
@@ -100,6 +108,7 @@ pub fn guard(cmd: &str, pos: &[String], flags: &Obj, agent: Option<(&Obj, &str)>
         "approve" => {
             let t = task()?;
             if flags.b("anyway") { return refused("approve --anyway", "The gate's override is the human's only."); }
+            if super::control_files::touches(&t) { return refused(&format!("approve {}", t.s("id")), "Its change touches agent control files, or their check is unavailable: only the human says yes to that."); }
             if touches_repo_file(&t) { return refused(&format!("approve {}", t.s("id")), "Its change touches the repo's .herdr-board.json: only the human says yes to that."); }
             // Another machine's: only that machine sees its change, and checks the yes there; one that cannot, never.
             if t.b("host") && !t.b("knowsAutopilot") { return refused(&format!("approve {}", t.s("id")), &format!("{} runs an older version that cannot check an autopilot turn's yes: update herdr-board there first.", t.s("host"))); }

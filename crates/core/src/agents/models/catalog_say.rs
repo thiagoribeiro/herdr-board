@@ -11,9 +11,13 @@ use crate::store::settings::lookup::setting_text;
 use crate::store::settings::values::models_fit;
 
 pub fn init() -> Res<(Value, String)> {
+    init_profile("")
+}
+pub fn init_profile(profile: &str) -> Res<(Value, String)> {
+    let source = match profile { "" | "default" => EXAMPLE, "corresponding" => include_str!("models.corresponding.toml"), _ => crate::fail!("Catalog profile must be default or corresponding") };
     let p = path();
     if p.exists() { crate::refuse!("{} is there already: it is yours, and is not written over. Change it, or remove it first to start from the example.", tilde(&p.display().to_string())); }
-    crate::store::files::write_atomic(&p, EXAMPLE.as_bytes())?;
+    crate::store::files::write_atomic(&p, source.as_bytes())?;
     Ok((json!({ "file": p.display().to_string() }), format!("Wrote the example catalog to {}: change it to what you have (herdr-board models catalog shows it as read).", tilde(&p.display().to_string()))))
 }
 pub fn catalog_command(do_init: bool) -> Res<(Value, String)> {
@@ -23,6 +27,7 @@ pub fn catalog_command(do_init: bool) -> Res<(Value, String)> {
     let mut refused = vec![];
     c.entries.retain(|e| match models_fit("worker.agent", &json!(e.agent)) { Ok(()) => true, Err(x) => { refused.push(format!("entry {}: {}; this entry is not used", e.name, x.msg.trim_start_matches("worker.agent: ").trim_end_matches('.'))); false } });
     c.problems.extend(refused);
+    super::equivalents::validate(&mut c);
     // An entry that escalates to one refused here escalates to nothing, as a task routed to it would.
     let names: Vec<String> = c.entries.iter().map(|e| e.name.clone()).collect();
     for e in c.entries.iter_mut().filter(|e| !e.escalate_to.is_empty() && !names.contains(&e.escalate_to)) {
@@ -45,6 +50,7 @@ pub fn catalog_command(do_init: bool) -> Res<(Value, String)> {
         let pad = " ".repeat(wide + 2);
         if !e.good_for.is_empty() { lines.push(format!("{pad}good for: {}", e.good_for)); }
         if !e.avoid_for.is_empty() { lines.push(format!("{pad}avoid for: {}", e.avoid_for)); }
+        if !e.family.is_empty() { lines.push(format!("{pad}family: {} · availability equivalents: {}", e.family, if e.equivalents.is_empty() { "none".into() } else { e.equivalents.join(", ") })); }
         let signs: Vec<String> = [e.max_files.map(|n| format!("up to {n} files")), e.max_minutes.map(|n| format!("up to {n} minutes"))].into_iter().flatten().collect();
         if !signs.is_empty() { lines.push(format!("{pad}size: {}", signs.join(", "))); }
         lines.push(format!("{pad}used: {}", used.get(&e.name).cloned().unwrap_or_else(|| "not yet in 30 days".into())));

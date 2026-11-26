@@ -19,6 +19,7 @@ pub fn whose(r: &Obj) -> &'static str {
 /// The next step, in one sentence: "delegate it", "approve PR#64 · Pass · 1 minor", "No change for 14h · Finishing".
 pub fn next_step(r: &Obj) -> String {
     if r.s("stage") == "todo" { return "delegate it".into(); }
+    if r.b("budgetStop") { return "inspect shared budget, reconcile unknown usage, then retry when allowance is available".into(); }
     let said = sentence(r).text();
     if in_review(r) && !r.b("stall") {
         let what = if r.b("pr") { pr_number(r) } else { "the merge".into() };

@@ -6,6 +6,7 @@ pub mod attached;
 pub mod attempts;
 pub mod automations;
 pub mod check_runs;
+pub mod corresponding;
 pub mod failures;
 pub mod fetch;
 pub mod files;

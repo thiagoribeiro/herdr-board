@@ -21,7 +21,7 @@ pub const LOCK: &str = "autopilot-adds";
 pub struct Added { pub task: Task, pub start: bool, pub dropped: Vec<String> }
 /// What an autopilot task records: who added it, when, and whether a change to the repo's file waits for you.
 pub fn record_of(co: &Co, machine: &str) -> Value {
-    json!({ "coordinator": key_of(co), "name": co.name(), "machine": machine, "at": now(), "repoFileWaits": words(co, "autopilot.repoFileWaits") != "no" })
+    json!({ "coordinator": key_of(co), "name": co.name(), "machine": machine, "at": now(), "repoFileWaits": words(co, "autopilot.repoFileWaits") != "no", "controlFilesWaits": words(co, "autopilot.controlFilesWaits") != "no" })
 }
 /// Is the repo `name` in this coordinator's area?
 fn in_area(co: &Co, repo: &str) -> bool { co.repo().map(|r| r.eq_ignore_ascii_case(repo)).unwrap_or(true) }

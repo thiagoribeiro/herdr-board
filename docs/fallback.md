@@ -10,6 +10,9 @@ Each is a list of agents, tried in order, written like `worker.agent` with comma
 (`codex, claude/claude-opus-5-5`: a model after a slash), or `none`. `none` is built in: without a list nothing changes.
 **It costs nothing while all goes well**: nobody extra runs until a hand-over.
 
+An optional [correspondence policy](model-correspondence.md) selects same-family catalog peers for availability
+failures. Explicit lists below, including an explicit `none`, take precedence.
+
 ```
 herdr-board set worker.fallback "codex, claude/claude-opus-5-5"   for every task of yours
 herdr-board set worker.fallback codex --repo my-app               for one repo

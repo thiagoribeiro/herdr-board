@@ -207,10 +207,11 @@ fn finish_steps(id: &str, g: &mut Guard, mut t: Task, ev: Option<Value>, force: 
         }
         // Its model was refused: the program again on its own default model, once (finish/model_refused.rs).
         let refused = if x.error.is_empty() || x.auth || x.passing { None } else { crate::agents::model_refused::read(&k, &x.error) };
-        if let Some(r) = &refused { if model_refused::on_default(id, g, &t, r)? { return Ok(()); } }
+        let outage = crate::agents::models::equivalents::unavailable(&x.error, x.passing, x.auth);
+        if let Some(r) = &refused { if (crate::store::settings::lookup::setting("fallback.corresponding", Some(&t)) != json!(true) || outage) && model_refused::on_default(id, g, &t, r)? { return Ok(()); } }
         // It cannot go on: the next agent on `worker.fallback` takes the task over; with nobody left it waits for you.
         let hw = if let Some(r) = &refused { r.plain.clone() } else if !x.error.is_empty() { why_of(&why, x.auth, x.passing, &x.reason, tries + 1, now()) } else if x.stop == "length" { "it ran out of room (context or output limit)".into() } else { "its model refused to continue".into() };
-        if hand_over(id, g, &hw, "")? { return Ok(()); }
+        if if outage { super::hand_over::unavailable(id, g, &hw)? } else { hand_over(id, g, &hw, "")? } { return Ok(()); }
         if let Some(r) = &refused { return model_refused::fail_refused(g, &t, r, &why); }
         if x.passing {
             let gu = format!("{}. ", gave_up("agent", &x.reason, tries + 1));
@@ -231,7 +232,7 @@ fn finish_steps(id: &str, g: &mut Guard, mut t: Task, ev: Option<Value>, force: 
         let screen = last_lines(&crate::agents::screen_text::agent_words(&read_screen(&api, &pane, a.as_ref().map(|a| a.s("agent_status")), 60)), 12); // its words, not its frames
         if is_auth_failure(&screen) {
             g.set(&keep)?;
-            if hand_over(id, g, "logged out", "")? { return Ok(()); }
+            if super::hand_over::unavailable(id, g, "logged out")? { return Ok(()); }
             let mut f = failure("agent", "Needs a login", &screen, ""); f.put("auth", true); f.put("msg", "Needs a login"); f.del("next");
             fail(g, f, FailHow::default())?;
             return Ok(());

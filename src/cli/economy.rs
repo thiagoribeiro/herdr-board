@@ -18,7 +18,9 @@ pub fn command(cmd: &str, a: &Args) -> Res<(Value, String)> {
             "summary" => json!({ "id": t.at("id"), "summary": crate::digest::cached(&t), "evidence": crate::digest::evidence::references(&t), "generation": t.at("digestAttempt"), "current": crate::task_status::snapshot(&t) }),
             "usage" => {
                 if let Some(c) = crate::limits::spent::count(t.s("id"), "agent", 300) { t = c; }
-                json!({ "id": t.at("id"), "total": t.at("spent").at("total"), "metrics": t.at("spent").at("metrics"), "partial": t.at("spent").at("partial"), "summarizer": t.at("digestUsage"), "monetaryCost": null })
+                json!({ "id": t.at("id"), "total": t.at("spent").at("total"), "metrics": t.at("spent").at("metrics"), "partial": t.at("spent").at("partial"),
+                    "sessions": t.at("spent").at("sessions"), "subagents": t.at("spent").at("subagents"), "pendingSessions": t.at("spent").at("owed"),
+                    "summarizer": t.at("digestUsage"), "monetaryCost": null })
             }
             _ => crate::task_status::snapshot(live.iter().find(|r| r.s("id") == t.s("id")).unwrap_or(&t)),
         };

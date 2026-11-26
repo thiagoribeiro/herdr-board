@@ -8,6 +8,7 @@ pub mod add;
 pub mod allow;
 pub mod care;
 pub mod command;
+pub mod control_files;
 pub mod events;
 pub mod far;
 pub mod heard;

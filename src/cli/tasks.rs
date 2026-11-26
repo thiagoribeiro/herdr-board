@@ -82,6 +82,8 @@ pub fn command(cmd: &str, a: &Args) -> Res<(Value, String)> {
             (shown_of(t.s("id")), format!("{}: added{routed}{}{on}{}{dropped}", t.s("id"), if crate::chat_only::is_chat(&t) { " as chat only" } else if is_research(&t) { " as research only" } else { "" }, title_note(&rest(1))))
         }
         "status" | "summary" | "usage" => super::economy::command(cmd, a)?,
+        "evaluate" => super::evaluate::command(a)?,
+        "budget" => super::budget::command(a)?,
         "batch" => super::batch::command(a)?,
         "list" | "ls" if flags.b("pinned") => { let keys = repo_keys(); super::pins::list(board(true), &|t| line(t, &keys), &brief) }
         "list" | "ls" => {
@@ -178,7 +180,11 @@ pub fn command(cmd: &str, a: &Args) -> Res<(Value, String)> {
             let w = Where { task: flag("task"), repo: flag("repo"), automation: flag("automation"), coord };
             settings_command(cmd, pos, &w, if pos.len() > 2 { Some(json!(rest(2))) } else { None })?
         }
-        "models" if pos.get(1).map(|s| s.as_str()) == Some("catalog") => crate::agents::models::catalog_say::catalog_command(flags.b("init"))?,
+        "models" if pos.get(1).map(|s| s.as_str()) == Some("catalog") => {
+            if let Some(profile) = flag("profile") { if !flags.b("init") { crate::fail!("--profile requires --init; an existing catalog is never overwritten"); } crate::agents::models::catalog_say::init_profile(&profile)? }
+            else { crate::agents::models::catalog_say::catalog_command(flags.b("init"))? }
+        },
+        "models" if pos.get(1).map(|s| s.as_str()) == Some("equivalents") => crate::agents::models::equivalents_say::command(&pos.get(2).cloned().unwrap_or_default())?,
         "models" if pos.get(1).map(|s| s.as_str()) == Some("stats") => crate::agents::models::stats::stats_command(&flag("since").unwrap_or_default(), &crate::agents::models::catalog::load())?,
         "models" => crate::agents::models::say::models_command(&pos.get(1).cloned().unwrap_or_default())?,
         "automations" | "automation" => crate::automations::command::automations_command(&pos[1..], flags, &here)?,
@@ -226,7 +232,7 @@ fn coordinator(a: &Args, here: &std::path::Path, me: Option<&(Obj, &str)>) -> Re
     match what {
         "where" => return Ok((json!({ "where": state::get(&socket).map(|c| c.at("where").clone()).unwrap_or(json!([])) }), r::where_text(&socket))),
         "context" => { let co = crate::coordinator::co::Co::from(&socket); let v = co.repo().map(crate::coordinator::context::project).unwrap_or_else(|| Value::Array(crate::store::tasks::list(Default::default()).iter().map(crate::task_status::snapshot).collect())); return Ok((v.clone(), v.to_string())); }
-        "usage" => { let co = crate::coordinator::co::Co::from(&socket); crate::coordinator::usage::count(&co); let c = state::get(&co); let v = json!({ "total": c.at("usage"), "lastRequest": c.at("requestUsage"), "history": c.at("requestHistory"), "monetaryCost": null }); return Ok((v.clone(), v.to_string())); }
+        "usage" => { let co = crate::coordinator::co::Co::from(&socket); crate::coordinator::usage::count(&co); let c = state::get(&co); let v = json!({ "total": c.at("usage"), "coverage": c.at("usageCoverage"), "lastRequest": c.at("requestUsage"), "history": c.at("requestHistory"), "monetaryCost": null }); return Ok((v.clone(), v.to_string())); }
         "memory" => { let co = crate::coordinator::co::Co::from(&socket); if !rest.is_empty() { let v: Value = serde_json::from_str(&rest)?; crate::coordinator::context::remember(&co, &v)?; } let v = state::get(&co).at("memory").clone(); return Ok((v.clone(), v.to_string())); }
         "history" => { let v = state::get(&socket).at("checkpoints").clone(); return Ok((v.clone(), v.to_string())); }
         "checkpoint" => {
