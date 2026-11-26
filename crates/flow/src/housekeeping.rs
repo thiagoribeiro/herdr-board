@@ -24,7 +24,7 @@ fn key(s: &str) -> String { sha1_smol::Sha1::from(s).digest().to_string()[..8].t
 pub enum Force { No, Yes, Pr }
 
 pub fn housekeeping(socket: &str, force: Force) {
-    if !has_tasks() { return; }
+    if !has_tasks() { crate::budget::runtime::tick(&[], socket); return; }
     crate::runner::outside::start_asked(); // jobs asked for from inside a plan writer's sandbox, started out here
     if force == Force::No && !due(&format!("housekeep-{}", key(socket)), 2000) { return; }
     once::once(&key(socket), force, |f| pass(socket, f));
@@ -35,6 +35,7 @@ fn pass(socket: &str, force: Force) {
     // With the attempts of tasks done several times at once: each has an agent of its own to look after (attempts.rs).
     let every = list(ListOpts { attempts: true, ..Default::default() });
     let tasks: Vec<Task> = every.iter().filter(|t| !t.b("attemptOf")).cloned().collect();
+    crate::budget::runtime::tick(&every, socket);
     if socket_exists(socket) {
         let linked: Vec<&Task> = every.iter().filter(|t| is_agent_task(t) && same_socket(t.at("link").s("socket"), socket) && !["done", "todo", "progress", "queued", "after"].contains(&t.s("stage"))).collect();
         if !linked.is_empty() {

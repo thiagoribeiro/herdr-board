@@ -1,0 +1,82 @@
+# Proposed operational counterparts, pinned to model names verified on 2026-11-25.
+# Family means intended task class, not benchmark-proven equal quality. Validate pairs on your tasks.
+# Cost is an editable planning weight, not a price or an equivalence of subscription allowances.
+# Independent providers reduce shared outages; explicit ordering is authoritative, never inferred from cost.
+# Sources: https://code.claude.com/docs/en/model-config
+#          https://developers.openai.com/api/docs/guides/model-selection
+# This profile changes no role's primary model and enables nothing until fallback.corresponding is set.
+
+[[entry]]
+name = "leve"
+agent = "claude/claude-haiku-5-5"
+effort = "low"
+family = "leve"
+equivalents = ["leve_codex"]
+cost = 1
+good_for = "texto, documentação, pequenas mudanças repetíveis, extração de dados com resultado verificável"
+avoid_for = "arquitetura, concorrência, segurança, tarefa ambígua ou sem teste de aceitação"
+escalate_to = "padrao"
+
+[[entry]]
+name = "leve_codex"
+agent = "codex/gpt-6-luna"
+effort = "medium"
+family = "leve"
+equivalents = ["leve"]
+cost = 1
+good_for = "tarefas pequenas e repetíveis, com resultado verificável"
+avoid_for = "problemas abertos, migrações ou segurança"
+escalate_to = "padrao_codex"
+
+[[entry]]
+name = "padrao"
+agent = "claude/claude-sonnet-5-5"
+effort = "medium"
+family = "cotidiano"
+equivalents = ["padrao_codex", "codex_anterior"]
+cost = 3
+good_for = "features, correções e refatores em código existente, com testes"
+avoid_for = "arquitetura inédita ou problemas excepcionalmente difíceis"
+escalate_to = "pesado"
+
+[[entry]]
+name = "padrao_codex"
+agent = "codex/gpt-6.2-sol"
+effort = "medium"
+family = "cotidiano"
+equivalents = ["padrao", "codex_anterior"]
+cost = 3
+good_for = "features e correções em código existente, testes e revisão técnica"
+avoid_for = "problemas muito abertos ou projetos especialmente complexos"
+escalate_to = "pesado_codex"
+
+[[entry]]
+name = "codex_anterior"
+agent = "codex/gpt-6.1-sol"
+effort = "high"
+family = "cotidiano"
+equivalents = ["padrao", "padrao_codex"]
+cost = 3
+good_for = "continuidade de projetos já validados neste modelo; validar o par antes de depender dele"
+avoid_for = "assumir paridade com uma geração nova sem avaliação"
+escalate_to = "pesado_codex"
+
+[[entry]]
+name = "pesado"
+agent = "claude/claude-opus-5-5"
+effort = "medium"
+family = "complexo"
+equivalents = ["pesado_codex"]
+cost = 10
+good_for = "arquitetura, concorrência, migrações, segurança e investigação complexa"
+avoid_for = "trabalho trivial que um modelo menor já resolve corretamente"
+
+[[entry]]
+name = "pesado_codex"
+agent = "codex/gpt-6.2-astra"
+effort = "high"
+family = "complexo"
+equivalents = ["pesado"]
+cost = 10
+good_for = "engenharia complexa, projetos abertos, análise e planejamento difíceis"
+avoid_for = "tarefas simples que não justificam o custo de um modelo forte"

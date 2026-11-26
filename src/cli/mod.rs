@@ -3,7 +3,9 @@
 //! entries herdr and the agents' hooks run are here; the commands on tasks are cli/tasks.rs.
 pub mod flags;
 pub mod batch;
+pub mod budget;
 pub mod economy;
+pub mod evaluate;
 pub mod help;
 pub mod pins;
 pub mod tasks;
@@ -122,7 +124,8 @@ fn run(cmd: &str, a: &Args) -> Res<i32> {
     // What a person reads names a task by its repo's short key where it has one (`HSW-134: updated`); --json keeps ids.
     if a.flags.b("json") { println!("{}", serde_json::to_string_pretty(&value).unwrap_or_default()); }
     else { println!("{}", if said.is_empty() { serde_json::to_string_pretty(&value).unwrap_or_default() } else { say_ids(&said, &repo_keys()) }); }
-    crate::housekeeping::housekeeping(&crate::herdr::cli::current_socket(), crate::housekeeping::Force::No);
+    // An opt-in evaluation query must not trigger scheduled agents or helper calls as a side effect.
+    if !["evaluate", "budget", "models"].contains(&cmd) { crate::housekeeping::housekeeping(&crate::herdr::cli::current_socket(), crate::housekeeping::Force::No); }
     Ok(0)
 }
 /// For the task that owns the focused pane, from the invocation context; does nothing otherwise. A merge cannot be

@@ -33,7 +33,7 @@ pub fn need_of(t: &Obj, approve: bool) -> Option<&'static str> {
 }
 /// A task autopilot added whose change touches the repo's own settings file waits for your own yes
 /// (`autopilot.repoFileWaits`): its record says what was in force when it was added.
-pub fn held_for_you(t: &Obj) -> bool { t.at("autopilot").is_object() && t.at("autopilot").at("repoFileWaits") != &json!(false) && touches_repo_file(t) }
+pub fn held_for_you(t: &Obj) -> bool { super::control_files::held(t) || (t.at("autopilot").is_object() && t.at("autopilot").at("repoFileWaits") != &json!(false) && touches_repo_file(t)) }
 /// Does its change touch the repo's own `.herdr-board.json`? Read from what its branch changed since it started.
 pub fn touches_repo_file(t: &Obj) -> bool {
     let tree = t.t("worktree");

@@ -121,7 +121,8 @@ fn snapshot(t: &Obj) -> Value {
     let onto = if t.s("stage") == "approval" { json!(crate::sync::lands_on(t)) } else { Value::Null };
     let at = if tree.is_empty() { folder.clone() } else { tree.clone().into() };
     json!({ "talk": talk, "landsOn": onto, "folder": tilde(&folder.display().to_string()), "tree": tilde(&tree), "branch": branch_of(&at),
-        "settings": rows(&Scope::task(t)).iter().map(|r| r.json()).collect::<Vec<_>>(), "problems": problems(Some(t)), "canWorktree": can_worktree(&folder), "repo": in_repo(t) })
+        "settings": rows(&Scope::task(t)).iter().map(|r| r.json()).collect::<Vec<_>>(), "problems": problems(Some(t)), "canWorktree": can_worktree(&folder), "repo": in_repo(t),
+        "budget": crate::budget::view::snapshot(&crate::budget::admission::owner(t), t.s("repo")) })
 }
 /// `said`, `usage` and `agentVersion` ride along on each task; `coordinator`: this machine's (coordinator/far.rs);
 /// `autopilot`: what each of its coordinators shows of autopilot (autopilot/far.rs); `version` is this side's version (a machine on an older

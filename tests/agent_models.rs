@@ -12,6 +12,7 @@ use sw::store::settings::lookup::{setting_text, Scope};
 
 /// The catalog of models and a task's route: the catalog checked, the programs it allows, a route as a place of its own.
 mod route_catalog;
+pub mod equivalents;
 
 fn has(text: &str, re: &str) -> bool { regex::Regex::new(re).unwrap().is_match(text) }
 fn refused(name: &str, value: &str, re: &str) { let e = set_value(name, &json!(value), &Scope::you()).unwrap_err(); assert!(has(&e.msg, re), "{name} {value}: {re}: {}", e.msg); }

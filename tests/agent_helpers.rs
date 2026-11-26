@@ -6,6 +6,8 @@ use common::*;
 use serde_json::json;
 use sw::json::*;
 
+mod usage;
+
 /// Flags that would take a program's helpers away or start it without its tools, its skills or its settings.
 const NO_HELPERS: &[&str] = &["allowedtools", "allowed-tools", "disallowedtools", "disallowed-tools", "--tools", "no-tools", "no-skills", "--bare",
     "safe-mode", "strict-mcp", "disable-slash", "multi_agent", "--disable ", " -p ", "--print", "--agents"];

@@ -7,6 +7,7 @@ pub mod co;
 pub mod commands;
 pub mod context;
 pub mod far;
+pub mod fallback;
 pub mod look;
 pub mod look_live;
 pub mod place;

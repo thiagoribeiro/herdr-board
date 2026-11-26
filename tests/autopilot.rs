@@ -3,6 +3,7 @@
 //! coordinator's settings, looked up as a task's are: this time -> this coordinator -> you -> built in, its own an
 //! entry of its own in config.json set with flags that cannot clash with a repo's name, none read from a repo's file.
 use crate::common;
+mod control_files;
 use common::pilot::*;
 use common::*;
 use serde_json::json;

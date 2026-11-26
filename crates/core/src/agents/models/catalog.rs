@@ -72,11 +72,11 @@ fn allow_line(text: &str) -> Option<toml::Table> {
 fn one_line(s: &str) -> String { s.split_whitespace().collect::<Vec<_>>().join(" ") }
 
 #[derive(Clone, Debug, Default, PartialEq)]
-pub struct Entry { pub name: String, pub agent: String, pub effort: String, pub cost: f64, pub good_for: String, pub avoid_for: String, pub escalate_to: String, pub max_files: Option<i64>, pub max_minutes: Option<i64> }
+pub struct Entry { pub name: String, pub agent: String, pub effort: String, pub cost: f64, pub good_for: String, pub avoid_for: String, pub escalate_to: String, pub family: String, pub equivalents: Vec<String>, pub max_files: Option<i64>, pub max_minutes: Option<i64> }
 impl Entry {
     pub fn json(&self) -> Value {
         json!({ "name": self.name, "agent": self.agent, "effort": self.effort, "cost": self.cost, "good_for": self.good_for, "avoid_for": self.avoid_for,
-            "escalate_to": if self.escalate_to.is_empty() { Value::Null } else { json!(self.escalate_to) }, "max_files": self.max_files, "max_minutes": self.max_minutes })
+            "escalate_to": if self.escalate_to.is_empty() { Value::Null } else { json!(self.escalate_to) }, "family": self.family, "equivalents": self.equivalents, "max_files": self.max_files, "max_minutes": self.max_minutes })
     }
 }
 #[derive(Clone, Debug, Default)]
@@ -97,7 +97,7 @@ pub fn load() -> Catalog { from(&raw()) }
 /// A catalog's text, read and checked: for the tests, and for a file not yet saved.
 pub fn parse(text: &str) -> Catalog { from(&raw_of(text, true)) }
 
-const KEYS: [&str; 9] = ["name", "agent", "effort", "cost", "good_for", "avoid_for", "escalate_to", "max_files", "max_minutes"];
+const KEYS: [&str; 11] = ["name", "agent", "effort", "cost", "good_for", "avoid_for", "escalate_to", "family", "equivalents", "max_files", "max_minutes"];
 fn entry_of(i: usize, v: &toml::Value, allow: &Option<Vec<String>>) -> Result<Entry, String> {
     let Some(t) = v.as_table() else { return Err(format!("entry {}: not a table", i + 1)) };
     let word = |k: &str| t.get(k).and_then(|x| x.as_str()).map(|s| s.trim().to_string()).unwrap_or_default();
@@ -106,7 +106,8 @@ fn entry_of(i: usize, v: &toml::Value, allow: &Option<Vec<String>>) -> Result<En
     if name.is_empty() { return Err(format!("{who}: it needs a name (name = \"leve\")")); }
     if !name.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_') { return Err(format!("{who}: a name is one word of letters, digits, - and _")); }
     if let Some(k) = t.keys().find(|k| !KEYS.contains(&k.as_str())) { return Err(format!("{who}: unknown key \"{k}\"{}", crate::store::settings::values::nearest(k, &KEYS).map(|n| format!(" (did you mean {n}?)")).unwrap_or_default())); }
-    for k in ["agent", "effort", "good_for", "avoid_for", "escalate_to"] { if t.get(k).map(|x| !x.is_str()).unwrap_or(false) { return Err(format!("{who}: {k} is words, in quotes")); } }
+    for k in ["agent", "effort", "good_for", "avoid_for", "escalate_to", "family"] { if t.get(k).map(|x| !x.is_str()).unwrap_or(false) { return Err(format!("{who}: {k} is words, in quotes")); } }
+    let equivalents = super::equivalents::read(t.get("equivalents")).map_err(|e| format!("{who}: {e}"))?;
     if word("agent").is_empty() { return Err(format!("{who}: it needs an agent, a program with an optional model after a slash (agent = \"claude/sonnet\")")); }
     let agent = text(&check("worker.agent", &json!(word("agent")), "").map_err(|e| format!("{who}: {}", e.msg.trim_start_matches("worker.agent").trim_start_matches(": ")))?);
     let kind = crate::store::settings::values::agent_of(&agent).kind;
@@ -117,7 +118,7 @@ fn entry_of(i: usize, v: &toml::Value, allow: &Option<Vec<String>>) -> Result<En
     let num = |k: &str| t.get(k).map(|x| x.as_float().or_else(|| x.as_integer().map(|n| n as f64)).filter(|n| *n >= 0.0).ok_or(format!("{who}: {k} is a number, 0 or more")));
     let cost = num("cost").transpose()?.unwrap_or(1.0);
     let whole = |k: &str| -> Result<Option<i64>, String> { t.get(k).map(|x| x.as_integer().filter(|n| *n > 0).ok_or(format!("{who}: {k} is a whole number, 1 or more"))).transpose() };
-    Ok(Entry { name, agent, effort, cost, good_for: word("good_for"), avoid_for: word("avoid_for"), escalate_to: word("escalate_to"), max_files: whole("max_files")?, max_minutes: whole("max_minutes")? })
+    Ok(Entry { name, agent, effort, cost, good_for: word("good_for"), avoid_for: word("avoid_for"), escalate_to: word("escalate_to"), family: word("family"), equivalents, max_files: whole("max_files")?, max_minutes: whole("max_minutes")? })
 }
 fn from(r: &Raw) -> Catalog {
     let mut c = Catalog { file: r.file, problems: r.problems.clone(), allow: r.allow.clone(), ..Default::default() };
@@ -141,5 +142,6 @@ fn from(r: &Raw) -> Catalog {
             c.entries[i].escalate_to.clear();
         } else if let Some(n) = names.iter().find(|n| n.eq_ignore_ascii_case(&to)) { c.entries[i].escalate_to = n.clone(); }
     }
+    super::equivalents::validate(&mut c);
     c
 }

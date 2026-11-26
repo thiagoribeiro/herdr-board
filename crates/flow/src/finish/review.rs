@@ -24,6 +24,7 @@ fn refused_words(by: &str, error: &str) -> String {
 pub fn close_reviewer(id: &str) {
     let Some(t) = get(id) else { return };
     if !t.at("link").at("reviewer").b("pane") { return; }
+    crate::limits::spent::count(id, "reviewer", 10000);
     flow::tabs::close_reviewer_tab(&flow::task::h(&t), t.at("link").at("reviewer"));
     let _ = update_wait(id, 10000, |t| { if t.at("link").is_object() { t.obj_mut("link").put("reviewer", Value::Null); } Ok(Change::Write) });
 }

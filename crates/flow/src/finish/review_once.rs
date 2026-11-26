@@ -14,7 +14,7 @@ use crate::gate;
 use crate::json::*;
 use crate::runner::{is_aborted, Guard};
 use crate::store::files::artifacts_dir;
-use crate::store::handovers::{handover_line, last_handover, log_handover};
+use crate::store::handovers::{handover_line, last_handover};
 use crate::store::marks::pending_events;
 use crate::store::repos::{cwd_of, folder_of, git_out};
 use crate::store::reviews::{keep_saved_review, review_history, review_round};
@@ -28,6 +28,7 @@ pub struct Plan { pub brief: Box<dyn Fn(&Obj, &Path) -> String> }
 fn sleep(ms: i64) { std::thread::sleep(std::time::Duration::from_millis(ms.max(0) as u64)); }
 #[allow(clippy::too_many_arguments)]
 pub fn review_once(id: &str, g: &mut Guard, text: &str, change: Option<&Value>, to_land: bool, ch: &Obj, check: &str, plan: Option<&Plan>) -> Res<Reviewed> {
+    if let Some(t) = get(id) { crate::budget::admission::task(&t, "reviewer")?; }
     // One that just took the review over says so on the row until the Watcher has a line of it.
     let mut t = g.set(|t| {
         let took = last_handover(t, "reviewer");
@@ -45,13 +46,19 @@ pub fn review_once(id: &str, g: &mut Guard, text: &str, change: Option<&Value>, 
     std::fs::create_dir_all(&dir)?;
     // The configured reviewer program may not be installed here: review with the working agent's kind instead, on that
     // kind's own default model and effort. Or, with a `reviewer.fallback`, the first on that list that is installed.
-    let who = start::role_of("reviewer", &|n| ch.at(n).clone());
+    let mut who = start::role_of("reviewer", &|n| ch.at(n).clone());
     let (now_agent, stand_in) = reviewer_now(&t, ch);
+    if !stand_in.is_empty() {
+        let choices = crate::store::corresponding::choices(&t, "reviewer", ch.s("reviewer.agent"), ch, true);
+        t = g.set(|t| crate::store::corresponding::select(t, "reviewer", &now_agent, &choices.entries))?;
+    }
+    if let Some(effort) = crate::store::corresponding::effort(&t, "reviewer", &now_agent) { who.effort = effort; }
     let on = agent_of(&now_agent);
     let (mut rkind, mut rmodel, mut reffort, mut by) = (on.kind.clone(), on.model.clone(), who.effort.clone(), now_agent.clone());
+    if !installed::installed(&rkind) && ch.at("fallback.corresponding") == &json!(true) { crate::fail!("Reviewer {now_agent} is not installed and no eligible declared counterpart was found; inspect models equivalents"); }
     if !installed::installed(&rkind) && installed::installed(t.s("agent")) { rkind = t.t("agent"); rmodel = String::new(); reffort = String::new(); by = rkind.clone(); }
     // A stand-in for a program that is not installed is a hand-over like any other.
-    if !stand_in.is_empty() { g.set(|t| { let h = log_handover(t, "reviewer", ch.s("reviewer.agent"), &now_agent, &format!("{stand_in} is not installed here")); t.put("reviewerOn", now_agent.clone()); t.put("msg", handover_line(&h)); })?; }
+    if !stand_in.is_empty() { g.set(|t| { let h = crate::store::corresponding::log(t, "reviewer", ch.s("reviewer.agent"), &now_agent, &format!("{stand_in} is not installed here")); t.put("reviewerOn", now_agent.clone()); t.put("msg", handover_line(&h)); })?; }
     let round = if plan.is_some() { 0 } else { t.i("reviewRound") + 1 };
     let other = by != ch.s("reviewer.agent");
     let note = if rkind != who.kind && !t.b("reviewerOn") && stand_in.is_empty() { Some(format!("reviewed by {rkind}: {} is not installed here", who.kind)) } else { None };
@@ -115,6 +122,10 @@ pub fn review_once(id: &str, g: &mut Guard, text: &str, change: Option<&Value>, 
         };
         loop {
             g.check()?;
+            if crate::budget::tracking() {
+                let cur = get(id).unwrap_or_else(|| t.clone());
+                if cur.b("budgetStop") { error = cur.at("budgetStop").t("reason"); break; }
+            }
             // The verdict file appearing is the finish signal.
             if verdict_file.exists() {
                 sleep(every.min(300)); // let the write complete
@@ -144,7 +155,7 @@ pub fn review_once(id: &str, g: &mut Guard, text: &str, change: Option<&Value>, 
             else if !blocked && cur.s("stage") == "reviewneeds" { g.set(|t| { t.put("stage", "reviewing"); t.put("msg", "Under review"); })?; g.allow(&["reviewneeds"]); }
             let at_rest = a.as_ref().map(|a| a.s("agent_status") == "idle" || a.s("agent_status") == "done").unwrap_or(false);
             if !sent && at_rest {
-                match crate::submit::hand(&api, &pane, &brief) { Ok(m) => { crate::store::said_by::note_board(id, &brief); comp_at_send = a.as_ref().map(|a| a.at("completion_seq").clone()).unwrap_or(Value::Null); *mark_cell.borrow_mut() = m; sent = true; sent_at = now(); } Err(e) => { if e.code != "agent_blocked" && e.code != "agent_not_ready" { sent = true; sent_at = now(); } } }
+                match crate::submit::hand(&api, &pane, &brief) { Ok(m) => { crate::store::said_by::note_board(id, &brief); comp_at_send = a.as_ref().map(|a| a.at("completion_seq").clone()).unwrap_or(Value::Null); *mark_cell.borrow_mut() = m; sent = true; sent_at = now(); } Err(e) => { if e.code == "budget" { error = e.message; break; } if e.code != "agent_blocked" && e.code != "agent_not_ready" { sent = true; sent_at = now(); } } }
             } else if mark_cell.borrow().is_some() && a.is_some() {
                 // The brief was typed: did the reviewer start on it? If not, enter is pressed again; never typed twice.
                 let mut m = mark_cell.borrow().clone().unwrap();

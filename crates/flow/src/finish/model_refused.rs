@@ -27,6 +27,7 @@ fn on_it(t: &Task) -> String {
 pub fn on_default(id: &str, g: &mut Guard, t: &Task, r: &Refused) -> Res<bool> {
     let a = agent_of(&on_it(t));
     if plan::planner(t) || a.model.is_empty() || a.kind != t.s("agent") { return Ok(false); }
+    if work(Some(t)).at("fallback.corresponding") == &json!(true) { return super::hand_over::unavailable(id, g, &r.plain); }
     if !hand_over_to(id, g, &format!("{} (now on its own default model)", r.plain), "", Some(&a.kind))? { return Ok(false); }
     let msg = format!("{}: started again on {}'s own default model", r.plain, a.kind);
     let t = g.set(|t| t.put("msg", msg.clone()))?;

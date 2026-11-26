@@ -86,7 +86,15 @@ pub fn tick_with(tasks: &[Obj], run: Run) {
             failed(&id, &expected, "Summary program has no one-shot mode", now); release(&expected, now); continue;
         };
         if who.kind == "claude" { cmd.args.extend(["--output-format".into(), "json".into()]); }
+        let claim = match crate::budget::helpers::begin(&format!("summary:{id}"), task.s("repo"), &who.kind) {
+            Ok(c) => c,
+            Err(e) => {
+                let _ = update(&id, |t| { if t.at("digestAttempt").i("at") != now { return Ok(Change::Keep); } let a = t.obj_mut("digestAttempt"); a.put("attempts", (a.i("attempts") - 1).max(0)); a.put("error", e.msg.clone()); Ok(Change::Write) });
+                release(&expected, now); continue;
+            }
+        };
         run(cmd, &[], Box::new(move |code, out, err| {
+            let _ = crate::budget::helpers::finish(claim, &out); // keep the original envelope for delivery evidence below
             if code != 0 && lean && crate::re!(r"(?i)unknown (option|argument)|unrecognized|unexpected argument").is_match(&err) {
                 let _ = update(&id, |t| { if t.at("digestAttempt").i("at") != now { return Ok(Change::Keep); } t.obj_mut("digestAttempt").put("plain", true); Ok(Change::Write) });
             }

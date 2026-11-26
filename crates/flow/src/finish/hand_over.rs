@@ -10,10 +10,10 @@ use crate::flow;
 use crate::gate;
 use crate::json::*;
 use crate::runner::{is_aborted, Guard};
-use crate::store::handovers::{handover_line, log_handover, next_fallback, nobody_left, on_now};
+use crate::store::handovers::{handover_line, next_fallback, nobody_left, on_now};
 use crate::store::repos::{cwd_of, git_out};
 use crate::store::settings::lookup::work;
-use crate::store::settings::values::{agent_of, list_of};
+use crate::store::settings::values::agent_of;
 use crate::store::tasks::{one_line, Task};
 
 /// Can this agent be started here, as the role's access says? "" or why not, for the task's note.
@@ -25,6 +25,13 @@ pub fn usable(agent: &str, access: &str) -> String {
     let old = crate::agents::access::too_old(&k, access);
     if !old.is_empty() { return old; }
     String::new()
+}
+pub fn corresponding_usable(agent: &str, access: &str, role: &str, entries: &[crate::agents::models::catalog::Entry]) -> String {
+    let why = usable(agent, access);
+    if !why.is_empty() || !entries.iter().any(|e| e.agent == agent) { return why; }
+    let a = agent_of(agent);
+    if let Some(why) = crate::agents::roles::why_not(&a.kind, role, !a.model.is_empty()) { return why; }
+    crate::store::settings::values::models_fit(&format!("{role}.agent"), &json!(agent)).err().map(|e| e.msg).unwrap_or_default()
 }
 /// What the one before it left: its commits on the branch, and whether changes lie uncommitted.
 fn done_so_far(t: &Task) -> String {
@@ -55,7 +62,7 @@ pub fn handover_prompt(t: &Task, from: &str, why: &str, findings: &str) -> Strin
     ].into_iter().filter(|s| !s.is_empty()).collect::<Vec<_>>().join("\n\n")
 }
 /// What a hand-over changes on the task, put back whole when the next agent cannot be started.
-const KEPT: [&str; 24] = ["route", "agent", "app", "on", "tried", "session", "transcript", "handled", "agentVersion", "hooked", "model", "usage", "failure", "waiting", "cutRetry", "checkFails", "reviewRounds", "kind", "watch", "review", "mergeIntent", "requireApproval", "fallbacks", "handovers"];
+const KEPT: [&str; 25] = ["route", "workerEquivalent", "agent", "app", "on", "tried", "session", "transcript", "handled", "agentVersion", "hooked", "model", "usage", "failure", "waiting", "cutRetry", "checkFails", "reviewRounds", "kind", "watch", "review", "mergeIntent", "requireApproval", "fallbacks", "handovers"];
 /// Hand the task to the next agent on `worker.fallback`, read now. `why`: why the one on it cannot go on, in plain
 /// words. `findings`: what is open, when the caller knows it better than the saved review. True when another agent is
 /// on it; false when nobody took over, and the caller goes on as it always did.
@@ -63,22 +70,32 @@ pub fn hand_over(id: &str, g: &mut Guard, why: &str, findings: &str) -> Res<bool
 /// The same, with `first` tried before the list: the program on it again on its own default model, when the model it
 /// was given was refused (finish/model_refused.rs).
 pub fn hand_over_to(id: &str, g: &mut Guard, why: &str, findings: &str, first: Option<&str>) -> Res<bool> {
+    run(id, g, why, findings, first, false)
+}
+pub fn unavailable(id: &str, g: &mut Guard, why: &str) -> Res<bool> { run(id, g, why, "", None, true) }
+fn run(id: &str, g: &mut Guard, why: &str, findings: &str, first: Option<&str>, outage: bool) -> Res<bool> {
+    crate::limits::spent::count(id, "agent", 2000);
     let mut t = g.check()?;
     let w = work(Some(&t));
-    let mut list = list_of(w.at("worker.fallback"));
-    if let Some(f) = first { list.insert(0, f.to_string()); }
-    if list.is_empty() || !t.at("link").b("pane") { return Ok(false); }
-    let api = flow::task::h(&t);
     let from = on_now(&t, &w.t("worker.agent"));
+    let choices = crate::store::corresponding::choices(&t, "worker", &from, &w, outage);
+    let mut list = choices.agents;
+    if let Some(f) = first { list.insert(0, f.to_string()); }
+    if list.is_empty() {
+        if choices.catalog { g.set(|t| t.obj_mut("fallbacks").put("worker", format!("No declared counterpart for {from}; inspect models equivalents. The quality escalation chain is not an availability substitute.")))?; }
+        return Ok(false);
+    }
+    if !t.at("link").b("pane") { return Ok(false); }
+    let api = flow::task::h(&t);
     let mut tried: Vec<String> = strings(t.at("tried"));
     if !tried.contains(&from) { tried.push(from.clone()); }
     let mut skipped: Vec<String> = vec![];
     let access = w.t("worker.access");
     let note = |g: &mut Guard, words: String| -> Res<()> { match g.set(|t| t.obj_mut("fallbacks").put("worker", words.clone())) { Ok(_) => Ok(()), Err(e) if is_aborted(&e) => Err(e), Err(_) => Ok(()) } };
     loop {
-        let (next, why_not) = next_fallback(&list, &from, &tried, |a| usable(a, &access));
+        let (next, why_not) = next_fallback(&list, &from, &tried, |a| corresponding_usable(a, &access, "worker", &choices.entries));
         for s in why_not { if !skipped.contains(&s) { skipped.push(s); } }
-        if next.is_empty() { note(g, nobody_left("worker.fallback", &skipped))?; return Ok(false); }
+        if next.is_empty() { note(g, nobody_left(if choices.catalog { "catalog equivalents" } else { "worker.fallback" }, &skipped))?; return Ok(false); }
         tried.push(next.clone());
         // The program that cannot go on is ended, so the pane is at its shell for the next one.
         let pane = t.at("link").t("pane");
@@ -88,8 +105,9 @@ pub fn hand_over_to(id: &str, g: &mut Guard, why: &str, findings: &str, first: O
         let k = agent_of(&next).kind;
         let mut entry = Value::Null;
         t = g.set(|t| {
-            entry = log_handover(t, "worker", &from, &next, why);
-            crate::store::route::on_handover(t, &next); // the next entry of a routed task's chain, with its effort
+            crate::store::corresponding::select(t, "worker", &next, &choices.entries);
+            entry = crate::store::corresponding::log(t, "worker", &from, &next, why);
+            if !t.b("workerEquivalent") { crate::store::route::on_handover(t, &next); }
             t.put("on", next.clone()); t.put("tried", tried.clone()); t.put("agent", k.clone()); t.put("app", k.clone());
             t.put("session", Value::Null); t.put("transcript", Value::Null);
             let h = t.obj_mut("handled"); h.put("msg", Value::Null); h.put("pos", 0);

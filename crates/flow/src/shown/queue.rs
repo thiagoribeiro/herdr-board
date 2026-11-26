@@ -36,13 +36,14 @@ pub fn tag(r: &Obj) -> String { if queued(r) && r.i("queuePlace") > 0 { format!(
 /// It waits for room on a disk (leftovers/room.rs), not for a free slot.
 pub fn waits_disk(r: &Obj) -> bool { r.s("stage") == "queued" && r.b("diskWait") && !r.b("archivedAt") }
 /// What a task in the queue waits for, in words: "waiting for disk space", or "waiting for a free slot".
-pub fn waits_for(r: &Obj) -> &'static str { if waits_disk(r) { DISK } else { WAITING } }
+pub fn waits_for(r: &Obj) -> &'static str { if waits_disk(r) { DISK } else if r.b("budgetWait") { BUDGET } else { WAITING } }
 /// "waiting for a free slot, Q#2", "waiting for disk space, Q#1", or "queued after HSW-6": where a queued task stands, in words.
 pub fn words(r: &Obj) -> String {
     if waits_after(r) { return crate::after::row_line(r); }
     let (w, q) = (waits_for(r), tag(r)); if q.is_empty() { w.into() } else { format!("{w}, {q}") }
 }
 /// The same in a word or two, for herdr's sidebar (its place is beside it): "queued", or "waiting for disk space".
-pub fn short(r: &Obj) -> &'static str { if waits_disk(r) { DISK } else { crate::status_words::QUEUED } }
+pub fn short(r: &Obj) -> &'static str { if waits_disk(r) { DISK } else if r.b("budgetWait") { BUDGET } else { crate::status_words::QUEUED } }
 pub const WAITING: &str = "waiting for a free slot";
 pub const DISK: &str = "waiting for disk space";
+pub const BUDGET: &str = "waiting for shared budget";

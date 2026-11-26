@@ -3,6 +3,8 @@
 **Two settings put a cap on what a task may cost.** When a task reaches one, its agent is stopped, its work is kept, and
 it waits for you. Nothing is merged. Both are `none` until you set them, so a board that sets neither works as before.
 
+For allowance shared by several tasks and coordinators, see [shared budgets](budgets.md).
+
 | Setting | Values | Means |
 |---|---|---|
 | `limit.time` | a time (`2h`, `45m`, `90s`) or `none` | the longest one run of an agent may take |
@@ -100,7 +102,7 @@ for waiting.
 
 ### Tokens
 
-Counted for the whole task: its agent, every review, every round, and any new chat its agent started. The board reads
+Counted for the whole task: its agent, native Claude/Codex subagents, every review, every round, and any new chat its agent started. The board reads
 them from each program's own saved conversation: everything the model read and wrote, every request added up, as the
 provider counts it.
 
@@ -114,12 +116,16 @@ Choose the count with that in mind (`show <id>` and the task panel say what a ta
 | Codex | its running total of input and output |
 | pi | input, cache-read, cache-write and output |
 
-- **The count is made at the end of each turn**, the agent's and the reviewer's. So one turn can pass the limit: a task
+- **The limit is enforced at the end of each turn**, the agent's and the reviewer's; usage is refreshed during work too. So one turn can pass the limit: a task
   with `limit.tokens 5m` whose agent uses 6m in its first turn is stopped at 6m, not 5m. A long turn is what
   `limit.time` is for.
 - **Usage is measured even without a limit**, incrementally from complete transcript lines. Conversations not yet
   available are remembered and counted when found. A limit set late still counts the whole task, including previous
   reviews. `usage ID --json` separates fresh input, cache creation, cache reads, output and requests.
+- **Native child conversations count too.** Claude's subagent files and Codex's verified child threads are read
+  recursively, including late writes after a review ended or a worker changed. Shared reply history is not billed
+  twice. Missing children or unsupported/unavailable task sessions are reported as partial usage; an unknown amount
+  is not a verified zero. Arbitrary model calls started through a shell or external tool are outside this measurement.
 - **A program whose tokens the board cannot count** adds nothing, and `show <id>` says for it that `limit.tokens` does
   nothing (`does nothing for <program>: its tokens cannot be counted`). The three programs whose conversation the board
   reads (Claude Code, Codex, pi) can all be counted; Herdr's other programs cannot ([agents](agents.md)).

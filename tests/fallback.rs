@@ -8,6 +8,7 @@ use sw::store::handovers::{handover_line, handovers};
 
 /// A routed task escalates to the next entry of its catalog chain, after route.escalateAfter failed reviews.
 mod route_flow;
+mod corresponding;
 
 const FAIL: &str = r#"{ "verdict": { "meets": false, "findings": [{ "severity": "major", "subject": "The file says v1, the task asked for v2", "where": "f.txt:1", "proof": "cat f.txt" }], "text": "Not what was asked." } }"#;
 

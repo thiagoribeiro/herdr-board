@@ -50,6 +50,7 @@ pub fn tick(co: impl Into<Co>) {
     if let Some(x) = &c { if x.b("workspace") && up(&co.socket) && !pumping(x) && due(&co.mark("coordinator-move"), 60000) { let _ = move_over(&Herdr::new(Some(co.socket.clone())), co, true); c = get(co); } }
     if let Some(x) = &c { if x.b("typed") && x.b("pane") && up(&co.socket) && !(pumping(x) && !mine(x)) { look_typed(co, x); } }
     let Some(c) = c else { return };
+    if !pumping(&c) && up(&co.socket) && super::fallback::failure(co).is_some() { kick(co); return; }
     if (c.arr("queue").is_empty() && !c.b("want")) || (pumping(&c) && !mine(&c)) || !up(&co.socket) { return; }
     if c.b("stopped") && !c.b("want") { return; } // stopped stays stopped, also with words still waiting
     if c.b("error") && !c.b("want") { return; } // a start that failed is not tried again by itself
@@ -144,18 +145,25 @@ pub fn pump(co: impl Into<Co>) {
 fn run_pump(co: &Co, taken: &mut HashSet<String>) -> Res<()> {
     let api = Herdr::new(Some(co.socket.clone()));
     for _ in 0..50 {
+        if let Some(error) = super::fallback::failure(co) { if !super::fallback::prepare(co, &error)? { break; } }
         let mut c = get(co).unwrap_or_default();
         if let Some(w) = c.o("want").cloned() {
             taken.insert(w.t("at"));
             // Its conversation is known before its terminal goes: a restart reopens it.
             if w.s("what") != "open" { if c.b("run") { active(co, &c); c = get(co).unwrap_or(c); } close_place(&api, &c); }
+            let mut applied = false;
             let _ = change(co, |c| {
+                if c.at("want") != &Value::Object(w.clone()) { return false; }
+                applied = true;
                 if c.at("want").at("at") == w.at("at") { c.put("want", Value::Null); }
                 if w.s("what") == "open" { return true; }
                 nowhere(c);
-                if w.s("what") == "new" { for (k, v) in obj(json!({ "run": null, "pick": w.at("pick"), "session": null, "transcript": null, "seen": null, "intro": false, "last": "", "where": [], "mark": null })) { c.insert(k, v); } }
+                if w.s("what") == "handover" { super::fallback::apply(c, &w); }
+                if w.s("what") == "new" { for (k, v) in obj(json!({ "run": null, "pick": w.at("pick"), "session": null, "transcript": null, "seen": null, "intro": false, "last": "", "where": [], "mark": null, "contextTokens": null, "contextSession": null, "observedModel": null })) { c.insert(k, v); } }
+                if w.s("what") == "new" { c.del("fallbackTried"); c.del("fallbackExhausted"); }
                 true
             })?;
+            if !applied { continue; }
             // Stopped is stopped: words that were still waiting stay waiting. Only something said after the stop starts it again.
             if w.s("what") == "stop" {
                 let at = w.i("at");
@@ -165,7 +173,7 @@ fn run_pump(co: &Co, taken: &mut HashSet<String>) -> Res<()> {
             }
         } else if c.arr("queue").is_empty() || c.b("stopped") { break; }
         let run_was = get(co).map(|c| c.i("startedAt")).unwrap_or(0);
-        let (_, blocked) = ensure(&api, co)?;
+        let (_, blocked) = match ensure(&api, co) { Ok(r) => r, Err(e) => { if super::fallback::prepare(co, &e.msg)? { continue; } return Err(e); } };
         let started = get(co).map(|c| c.i("startedAt")).unwrap_or(0) != run_was; // a wake that started it: its run counts as at rest
         if blocked { break; } // the tick tries again
         if get(co).map(|c| c.b("error")).unwrap_or(false) { change(co, |c| { c.put("error", ""); true })?; }
@@ -194,7 +202,7 @@ fn run_pump(co: &Co, taken: &mut HashSet<String>) -> Res<()> {
             }
             let id = if m.b("id") { m.t("id") } else { m.t("at") };
             let same = |x: &Value| if m.b("id") { x.s("id") == m.s("id") } else { x.at("at") == m.at("at") && x.at("text") == m.at("text") };
-            let note = m.at("where").is_object().then(|| { let mut n = m.o("where").cloned().unwrap_or_default(); n.put("said", m.at("said").clone()); n.put("at", m.at("at").clone()); n.put("id", id.clone()); n });
+            let note = m.at("where").is_object().then(|| { let mut n = m.o("where").cloned().unwrap_or_default(); n.put("said", m.at("said").clone()); n.put("at", m.at("at").clone()); n.put("id", id.clone()); n.put("request", m.clone()); n });
             let unsay = || if note.is_some() { let _ = change(co, |c| { let l: Vec<Value> = c.arr("where").iter().filter(|x| x.s("id") != id).cloned().collect(); c.put("where", l); true }); };
             if let Some(n) = &note { change(co, |c| { let mut l: Vec<Value> = c.arr("where").iter().filter(|x| x.s("id") != id).cloned().collect(); l.push(Value::Object(n.clone())); c.put("where", l); true })?; }
             // What it had last said when these words went in: the board shows them in its place until it says something new.
@@ -219,6 +227,7 @@ fn run_pump(co: &Co, taken: &mut HashSet<String>) -> Res<()> {
                 if !m.b("autopilot") { c.put("last", m.at("said").clone()); c.put("over", over.clone()); c.put("overId", over_id.clone()); } // a wake is no words of yours
                 // Who its turn is on: a task's agent that sent it (coordinator tell), and an autopilot wake (autopilot/).
                 c.put("typedFrom", m.at("sender").clone()); c.put("typedId", id.clone()); c.put("usageBase", usage_base.clone());
+                if m.b("recovery") && m.b("autopilot") { c.obj_mut("autopilot").obj_mut("turn").del("ended"); }
                 if m.b("autopilot") { crate::autopilot::wake::typed(c, &m, started); }
                 true
             })?;

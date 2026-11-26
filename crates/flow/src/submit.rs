@@ -88,6 +88,7 @@ pub fn pending_sent(t: &Task, a: Option<&Value>) -> bool {
 /// Fails with what herdr answers when nothing was typed (agent_blocked, agent_not_ready, anything unexpected).
 /// A text too long to hand over in one go is written to a file, and a line naming it is typed instead (hand_limits.rs).
 pub fn hand(api: &Herdr, pane: &str, text: &str) -> Result<Option<Value>, HerdrError> {
+    crate::budget::admission::pane(api, pane).map_err(|e| HerdrError { code: "budget".into(), message: e.msg })?;
     let typed = hand_over(text).map_err(|e| HerdrError { code: "failed".into(), message: e.msg })?;
     let a = api.agent_get(pane).ok().flatten();
     if let Err(e) = api.agent_prompt(pane, &typed) { if !["agent_prompt_stalled", "timeout"].contains(&e.code.as_str()) { return Err(e); } } // these do not prove nothing was sent; never send twice
@@ -112,6 +113,7 @@ pub fn look(api: &Herdr, pane: &str, mark: &mut Value, said: Option<&dyn Fn() ->
     let proof = said.and_then(|f| f());
     if took(mark, a.as_ref(), proof) == Some(true) { return "took"; }
     if mark.i("tries") >= TRIES { return "lost"; }
+    if crate::budget::admission::pane(api, pane).is_err() { return "wait"; }
     if let Some(m) = mark.as_object_mut() { let n = m.i("tries") + 1; m.put("tries", n); m.put("pressedAt", now()); }
     let _ = api.agent_keys(pane, &["enter"]);
     "pressed"

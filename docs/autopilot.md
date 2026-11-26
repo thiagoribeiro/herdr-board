@@ -199,6 +199,10 @@ setting that would allow it.
 - **`approve`** a plan or a merge, only under `autopilot.approve yes`, on tasks it may look after. Never `--anyway`.
 - **`autopilot off`**, for itself, another or `--all`. `autopilot on` for another only under `autopilot.switchOthers
   yes`, and only with that one's saved goal and settings.
+- **`coordinator memory` and `coordinator checkpoint`**, only for its own conversation, naming `--machine` or
+  `--project REPO` when it is not the main Coordinator. The usual memory freshness and history guards still apply;
+  neither command can change models, settings or another coordinator's memory. A task agent's message grants none
+  of this authority.
 
 **It cannot widen its own powers.** In autopilot's turn it cannot raise its own limits, write a setting or turn itself
 on with other values.
@@ -226,6 +230,12 @@ nothing more, and autopilot may not touch it.
 - Under `autopilot.repoFileWaits yes`, a change that touches the repo's own `.herdr-board.json` never merges by
   itself, whatever `merge.by` or `autopilot.approve` say. Its row says it waits for your own yes.
 - An approve from autopilot's turn is refused on any task whose change touches that file, whoever added it.
+- Under `autopilot.controlFilesWaits yes` (the default), a task autopilot added also waits for the human when it
+  changes `AGENTS.md`, `CLAUDE.md`, `CLAUDE.local.md`, `.mcp.json`, or anything under `.claude`, `.codex` or `.agents`,
+  including nested folders. Both sides of a rename, deletions and dirty/untracked changes count. An unavailable
+  comparison holds the task too. The task keeps the value at creation, as it does for `repoFileWaits`.
+- An approve from an autopilot turn cannot approve changes to those control files on any task. This is a merge
+  guard; it does not prevent a running program from changing local files or provide an operating-system sandbox.
 
 **Only you switch it on.** A task's agent or reviewer can never turn autopilot on or off, or write a `coordinator.*` or
 `autopilot.*` setting, not even by asking a coordinator. Turning off is open to you and to any coordinator's turn.

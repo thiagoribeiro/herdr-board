@@ -8,7 +8,7 @@ use crate::store::settings_list::SETTINGS;
 
 /// Positional arguments, flags (`--flag value`, `--flag` true, `--no-flag` false), and each flag as it was typed.
 pub struct Args { pub pos: Vec<String>, pub flags: Obj, pub typed: Obj }
-const BOOL: [&str; 19] = ["init", "json", "archived", "all", "done", "delegate", "force", "help", "skill", "research", "chat", "every-repo", "anyway", "now", "clear", "machine", "main-coordinator", "machine-coordinator", "pinned"];
+const BOOL: [&str; 20] = ["init", "json", "archived", "all", "done", "delegate", "force", "help", "skill", "research", "chat", "every-repo", "anyway", "now", "clear", "machine", "main-coordinator", "machine-coordinator", "pinned", "ended"];
 pub fn parse(argv: &[String]) -> Args {
     let (mut pos, mut flags, mut typed) = (vec![], Obj::new(), Obj::new());
     let mut i = 0;
@@ -55,6 +55,8 @@ fn takes(cmd: &str, sub: &str) -> Option<Takes> {
         "add" | "new" => s(ADD),
         "list" | "ls" => f(LIST),
         "status" | "summary" | "usage" => f(&["all", "repo"]),
+        "evaluate" => match sub { "record" => f(&["assessment"]), _ => f(&[]) },
+        "budget" => match sub { "settle" => f(&["used", "ended"]), _ => f(&[]) },
         "batch" => s(&["request-id", "anyway", "research", "chat", "after", "now"]),
         "report" => f(&["state", "kind", "msg", "title", "progress", "eta", "desc", "repo"]),
         "describe" | "rename" | "tell" | "stop" | "start" | "pick" | "review" | "retry" | "fix" | "finish" | "details" | "clear" => f(&[]),
@@ -65,7 +67,7 @@ fn takes(cmd: &str, sub: &str) -> Option<Takes> {
         "after" => f(&["clear"]),
         "approve" => f(&["anyway"]),
         "set" | "unset" | "show" => f(WHERE),
-        "models" => match sub { "catalog" => f(&["init"]), "stats" => f(&["since"]), _ => f(&[]) },
+        "models" => match sub { "catalog" => f(&["init", "profile", "import"]), "stats" => f(&["since"]), _ => f(&[]) },
         "automations" | "automation" => match sub { "add" | "new" => s(AUTO_ADD), "change" | "edit" => f(AUTO_CHANGE), _ => f(&[]) },
         "autopilot" => match sub { "on" => s(&["machine", "project", "goal"]), "off" => f(&["machine", "project", "all"]), "show" => f(&["machine", "project"]), _ => f(&[]) },
         "coordinator" => match sub { "tell" => f(&["delegate", "machine", "project"]), "new" | "fresh" => f(&["agent", "effort", "machine", "project"]), _ => f(&["machine", "project"]) },
@@ -77,7 +79,7 @@ fn takes(cmd: &str, sub: &str) -> Option<Takes> {
         _ => return None,
     })
 }
-fn has_subs(cmd: &str) -> bool { ["automations", "automation", "coordinator", "autopilot", "models"].contains(&cmd) }
+fn has_subs(cmd: &str) -> bool { ["automations", "automation", "coordinator", "autopilot", "models", "evaluate", "budget"].contains(&cmd) }
 /// The flags of a command that it does not know, as typed. A name with a dot is a setting where settings are taken.
 pub fn unknown_flags(cmd: &str, flags: &Obj, typed: &Obj, sub: &str) -> Vec<String> {
     let Some(t) = takes(cmd, sub) else { return vec![] };

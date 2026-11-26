@@ -25,11 +25,14 @@ pub fn wrap(co: &Co, message: &Value, words: &str) -> String {
     if lookup("coordinator.context", &Scope::coord(Coord::of(&co.settings_key())), &yours()).is_ok_and(|f| f.value == json!(false)) { return words.into(); }
     let mut ctx = if message.at("context").is_object() { message.at("context").clone() } else { capture(message.at("where"), message.s("said"), message.at("sender")) };
     ctx["requestId"] = message.at("id").clone();
+    let budget = crate::budget::view::snapshot(&crate::budget::admission::coordinator_owner(co), co.repo().unwrap_or(""));
+    if budget.is_object() { ctx["sharedBudget"] = budget; }
     if let Some(c) = get(co) {
         if c.at("memory").is_object() { ctx["memory"] = c.at("memory").clone(); }
-        ctx["contextTokens"] = c.at("contextTokens").clone();
+        let current = c.b("contextSession") && c.s("contextSession") == c.s("session");
+        ctx["contextTokens"] = if current { c.at("contextTokens").clone() } else { Value::Null };
         let budget = lookup("coordinator.contextBudget", &Scope::coord(Coord::of(&co.settings_key())), &yours()).ok().map(|f| crate::store::settings::values::tokens_of(&text(&f.value))).unwrap_or(0);
-        ctx["checkpointSuggested"] = json!(budget > 0 && c.f("contextTokens") > budget as f64);
+        ctx["checkpointSuggested"] = json!(current && budget > 0 && c.f("contextTokens") > budget as f64);
     }
     if ctx.to_string().len() > 48000 {
         if let Some(tasks) = ctx["tasks"].as_array_mut() { for task in tasks { if task.b("summary") { task["summaryAvailable"] = json!(true); task.as_object_mut().unwrap().remove("summary"); } } }

@@ -64,6 +64,7 @@ pub fn tell_as(id: &str, text: &str, keep_intent: bool, chat: bool) -> Res<Said>
     }
     if cur.s("stage") == "pick" { crate::fail!("{cid} waits for you to pick one of its attempts. Pick first: your words then go to that one's agent."); }
     cleaning_up(&cur)?;
+    crate::budget::admission::task(&cur, "agent")?;
     // A reply to work that ended and was cleaned up starts a new round with that message, in a fresh worktree.
     if cur.s("stage") == "done" && flow::git::cleaned_up(&cur) {
         queue_text(&cid, &words, Obj::new())?;
@@ -95,6 +96,7 @@ fn cleaning_up(t: &Task) -> Res<()> {
 /// review under way goes on while you chat with it (flow/chat.rs), the stage stays and the turn is the chat's.
 pub fn rearm(t: &mut Task, keep_intent: bool, live: bool, chat: bool) -> Res<()> {
     cleaning_up(t)?;
+    t.del("budgetStop");
     if !chat { t.del("chat"); }
     else if flow::chat::begin(t, "board", live && runner_alive(t)) == flow::chat::Began::During { granted(t); return Ok(()); }
     granted(t); // stopped at a limit: your word gives it the limit once more

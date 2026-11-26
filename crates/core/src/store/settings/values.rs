@@ -265,6 +265,8 @@ pub fn check(name: &str, value: &Value, agent: &str) -> Res<Value> {
     let e = known(name)?;
     if value.is_null() { return refuse(format!("{name} needs a value.")); }
     let v = check_ty(e, value)?;
+    if name == "budget.reviewPercent" && v.as_u64().is_none_or(|n| n > 100) { return refuse("budget.reviewPercent must be between 0 and 100".into()); }
+    if name == "budget.reserve" && v == json!(NONE) { return refuse("budget.reserve needs a positive slice; disable budget.tokens or budget.projectTokens instead".into()); }
     if !agent.is_empty() { let why = fits(name, &text(&v), agent, true); if !why.is_empty() { return refuse(format!("{name}: {why}")); } }
     Ok(v)
 }

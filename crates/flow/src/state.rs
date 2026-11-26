@@ -74,7 +74,7 @@ fn show_live(t: &Obj, live: &Value, now: i64) -> Show {
         "plan" => return out("blocked", &|s| { s.kind = Some("permission".into()); s.plan = true; }),
         "nosummary" => return out("error", &|s| if s.msg.is_empty() { s.msg = "Stopped without a summary".into(); }),
         "reviewneeds" => return out("blocked", &|s| if s.msg.is_empty() { s.msg = "The reviewer needs you".into(); }),
-        "stopped" => return if t.b("limitStop") { out("blocked", &|s| if s.msg.is_empty() { s.msg = "Stopped at a limit".into(); }) } else { out("idle", &|s| s.msg = "Stopped".into()) },
+        "stopped" => return if t.b("budgetStop") { out("blocked", &|s| s.msg = format!("Shared budget: {}", t.at("budgetStop").s("reason"))) } else if t.b("limitStop") { out("blocked", &|s| if s.msg.is_empty() { s.msg = "Stopped at a limit".into(); }) } else { out("idle", &|s| s.msg = "Stopped".into()) },
         "attempts" => {
             let kids: Vec<Obj> = t.arr("tries").iter().filter_map(|c| c.as_object().cloned()).collect();
             let a = attempts_shown(&kids, now);

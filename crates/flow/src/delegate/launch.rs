@@ -44,11 +44,13 @@ pub fn launch_extras(t: &Task, role: &str, kind: &str, round: i64, standing: &st
 /// Used by a first delegation and by restarting an exited agent. The pane must be at its shell prompt.
 pub fn start_agent(id: &str, g: &mut Guard, prompt: &str, resume: Option<&str>) -> Res<&'static str> {
     let t = get(id).ok_or("the task is gone")?;
+    crate::budget::admission::task(&t, "agent")?;
     let api = flow::task::h(&t);
     let kind = t.t("agent");
     // The worker's settings, read now, as it starts. A planner of its own runs on its own program and model.
     let w = work(Some(&t));
-    let worker = start::role_of("worker", &|n| w.at(n).clone());
+    let mut worker = start::role_of("worker", &|n| w.at(n).clone());
+    if let Some(effort) = crate::store::corresponding::effort(&t, "worker", t.s("on")) { worker.effort = effort; }
     let who = if plan::planner(&t) { let wr = t.at("plan").at("writer"); start::Role { kind: wr.t("kind"), model: wr.t("model"), effort: String::new(), fast: false, access: worker.access.clone(), instructions: worker.instructions.clone() } } else { worker.clone() };
     let took = agent_of(if plan::planner(&t) { "" } else { t.s("on") });
     let model = if took.kind == kind { took.model } else if who.kind == kind { who.model.clone() } else { String::new() };
@@ -95,6 +97,7 @@ pub fn start_agent(id: &str, g: &mut Guard, prompt: &str, resume: Option<&str>) 
         t.obj_mut("link").put("agent", name.clone());
         if !(t.i("workAt") >= t.i("since") && t.has("workAt")) { t.put("workAt", now()); }
         t.put("startedAgentAt", now()); t.put("exitedAt", Value::Null); t.put("tmp", tmp.display().to_string());
+        t.del("budgetStop");
         t.put("hooked", hooked); t.put("agentVersion", version.clone()); t.put("sent", Value::Null); t.put("unsent", Value::Null);
         if plan::open(t) { t.obj_mut("plan").put("mode", boxed); } // in the mount: started again after the yes (plan/build.rs)
         if t.at("failure").s("stage") == "send" { t.put("failure", Value::Null); }

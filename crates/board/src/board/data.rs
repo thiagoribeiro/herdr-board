@@ -183,5 +183,5 @@ pub fn snap(t: &Obj) -> Value {
     json!({ "talk": talk, "screen": screen, "plan": plan, "landsOn": if t.s("stage") == "approval" { json!(crate::sync::lands_on(t)) } else { Value::Null },
         "folder": tilde(&folder.display().to_string()), "root": folder.display().to_string(), "tree": tilde(&tree), "treePath": tree, "branch": branch_of(&at),
         "settings": rows(&Scope::task(t)).iter().map(|r| r.json()).collect::<Vec<_>>(), "problems": problems(Some(t)), "canWorktree": can_worktree(&folder), "repo": in_repo(t),
-        "worktreeGone": t.b("worktree") && tree.is_empty() })
+        "worktreeGone": t.b("worktree") && tree.is_empty(), "budget": crate::budget::view::snapshot(&crate::budget::admission::owner(t), t.s("repo")) })
 }

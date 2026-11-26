@@ -204,6 +204,9 @@ where each came from):
 
 ### Escalation
 
+For availability substitutes of the same intended capability, see [corresponding models](model-correspondence.md).
+They use a separate `family` and ordered `equivalents` list; they do not count as quality escalations.
+
 A routed task's `worker.fallback` is the chain of its entry's `escalate_to`. The next entry takes over as any fallback
 does ([the fallback agent](fallback.md)): in the same worktree and pane, with the task, its commits, the last words of
 the one before and the open findings, never in the middle of a session. With its own effort.
