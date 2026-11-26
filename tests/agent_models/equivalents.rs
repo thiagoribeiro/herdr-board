@@ -49,8 +49,11 @@ fn malformed_cross_family_missing_and_self_edges_are_not_eligible() {
     assert!(!equivalents::unavailable("Model is not supported by organization policy", true, false));
     assert!(equivalents::unavailable("Usage limit reached", false, false));
     assert!(equivalents::unavailable("You've hit your session limit · resets 5pm", false, false));
+    assert!(equivalents::unavailable("You've hit your weekly limit · resets Nov 28, 3am · out of usage credits", false, false));
+    assert!(equivalents::unavailable("You've hit your 5-hour limit · resets 2:20pm · out of usage credits", false, false));
     assert!(equivalents::unavailable("401 Unauthorized", false, true));
     assert!(!equivalents::unavailable("context window exceeded", false, false));
+    assert!(!equivalents::unavailable("You've hit your context window limit", false, false));
 }
 
 #[test]

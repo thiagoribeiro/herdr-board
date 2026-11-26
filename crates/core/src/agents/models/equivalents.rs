@@ -45,5 +45,5 @@ pub fn candidates(c: &Catalog, name: &str) -> Vec<Entry> {
 pub fn unavailable(error: &str, passing: bool, auth: bool) -> bool {
     if error.is_empty() || crate::re!(r"(?i)safety|policy|refus(?:e|al)|content.filter|not.allowed").is_match(error) { return false; }
     passing || auth || crate::agents::model_refused::read("", error).is_some()
-        || crate::re!(r"(?i)(?:usage|session).limit|out of (?:credits?|allowance)|\bquota\b|billing|credit balance|payment|model[^\n]{0,80}unavailable|overload|capacity|service.unavailable|connection|network|timed?.out").is_match(error)
+        || crate::re!(r"(?i)(?:usage|session|weekly|daily|monthly|\d+-hour).limit|hit your limit|out of (?:(?:usage )?credits?|allowance)|\bquota\b|billing|credit balance|payment|model[^\n]{0,80}unavailable|overload|capacity|service.unavailable|connection|network|timed?.out").is_match(error)
 }
