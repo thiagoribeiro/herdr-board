@@ -36,7 +36,7 @@ fn status_line(k: &str) -> String { kind(k).and_then(|a| a.login.as_ref()).map(|
 fn sign(k: &str) -> Sign {
     let Some(l) = kind(k).and_then(|a| a.login.as_ref()) else { return Sign::Unknown };
     use std::process::{Command, Stdio};
-    let child = match Command::new(program(k)).args(l.status).stdin(Stdio::null()).stdout(Stdio::piped()).stderr(Stdio::piped()).spawn() { Ok(c) => c, Err(e) => return Sign::NoAnswer(e.to_string()) };
+    let child = match Command::new(crate::agents::installed::executable(k)).args(l.status).stdin(Stdio::null()).stdout(Stdio::piped()).stderr(Stdio::piped()).spawn() { Ok(c) => c, Err(e) => return Sign::NoAnswer(e.to_string()) };
     match crate::herdr::cli::wait_with_timeout(child, WAIT_MS) {
         Ok(r) => if signed_out(r.status, &format!("{}\n{}", r.stdout, r.stderr)) { Sign::Out } else { Sign::In },
         Err(_) => Sign::NoAnswer(format!("it did not answer in {}s", WAIT_MS / 1000)),

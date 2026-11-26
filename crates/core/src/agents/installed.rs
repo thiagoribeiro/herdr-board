@@ -11,6 +11,13 @@ use std::path::{Path, PathBuf};
 fn versions_file() -> PathBuf { data_dir().join("versions.json") }
 /// Explicit health-check refresh: discard stale installation results and probe again in this process's environment.
 pub fn refresh() -> crate::err::Res<()> { write_json(&versions_file(), &json!({})) }
+/// Reuse the executable that answered the version probe, including for auth, model lists and tool-free helpers.
+pub fn executable(k: &str) -> PathBuf {
+    version_of(k);
+    read_obj(&versions_file()).and_then(|v| v.o(k).cloned())
+        .and_then(|v| v.so("executable").map(PathBuf::from)).filter(|p| crate::herdr::find::runs(p))
+        .unwrap_or_else(|| PathBuf::from(super::kinds::program(k)))
+}
 /// How long a program is given to say its version: one that hangs holds up nobody for longer (`late`).
 const VERSION_MS: u64 = 5000;
 /// The installed version of a program ("" when it is not installed), asked at most every ten minutes, of its own
@@ -21,8 +28,13 @@ pub fn version_of(k: &str) -> String {
     if all.at(k).is_object() && now() - all.at(k).i("at") < 600000 { return all.at(k).t("v"); }
     use std::process::{Command, Stdio};
     let program = super::kinds::program(k);
-    let probe = |exe: &Path| Command::new(exe).arg("--version").stdin(Stdio::null()).stdout(Stdio::piped()).stderr(Stdio::null()).spawn()
-        .map_err(|_| false).and_then(|c| crate::herdr::cli::wait_with_timeout(c, VERSION_MS).map_err(|_| true));
+    let mut executable = PathBuf::from(program);
+    let mut probe = |exe: &Path| {
+        let r = Command::new(exe).arg("--version").stdin(Stdio::null()).stdout(Stdio::piped()).stderr(Stdio::null()).spawn()
+            .map_err(|_| false).and_then(|c| crate::herdr::cli::wait_with_timeout(c, VERSION_MS).map_err(|_| true));
+        if !matches!(r, Err(false)) { executable = if exe.is_absolute() { exe.to_path_buf() } else { crate::herdr::find::in_dirs(program, &std::env::var("PATH").unwrap_or_default()).unwrap_or_else(|| exe.to_path_buf()) }; }
+        r
+    };
     let mut r = probe(Path::new(program));
     // A PATH entry can exist but fail to spawn (for example an obsolete interpreter). Try the user's actual install.
     for dir in crate::herdr::find::spots(&user_home()) {
@@ -42,7 +54,7 @@ pub fn version_of(k: &str) -> String {
         Err(late) => (String::new(), *late, *late),
     };
     let mut all = read_obj(&versions_file()).unwrap_or_default();
-    all.put(k, if late { json!({ "v": v, "at": now(), "found": found, "late": true }) } else { json!({ "v": v, "at": now(), "found": found }) });
+    all.put(k, if late { json!({ "v": v, "at": now(), "found": found, "late": true, "executable": executable }) } else { json!({ "v": v, "at": now(), "found": found, "executable": executable }) });
     let _ = write_json(&versions_file(), &Value::Object(all));
     v
 }

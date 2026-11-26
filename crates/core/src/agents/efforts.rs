@@ -104,7 +104,8 @@ fn said(a: &Kind, ask: Ask) -> Option<Said> {
     if had.is_some() && (no_run || (age < KEPT && !(ask == Ask::Again && age >= AGAIN))) { return had; }
     if no_run { return None; }
     let args: Vec<&str> = if a.efforts_read == EffortsRead::Catalog { a.models.list.to_vec() } else { vec!["--help"] };
-    let got = match run(program(a.name), &args) { Ok(Some(out)) => read(a.efforts_read, flag_of(a), &out), _ => return had };
+    let executable = super::installed::executable(a.name);
+    let got = match run(&executable.to_string_lossy(), &args) { Ok(Some(out)) => read(a.efforts_read, flag_of(a), &out), _ => return had };
     if got.levels.is_empty() { return had; }
     let mut all = read_obj(&file()).unwrap_or_default();
     let by: Obj = got.by.iter().map(|(m, l)| (m.clone(), json!(l))).collect();

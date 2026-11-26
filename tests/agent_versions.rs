@@ -51,6 +51,7 @@ echo 'Claude Code 2.1.332'
     let version = sw::agents::installed::version_of("claude");
     unsafe { std::env::set_var("PATH", old_path); }
     assert_eq!(version, "2.1.332", "cache={}, home={}, program={}", read(&file), sw::store::files::user_home().display(), program.display());
+    assert_eq!(sw::agents::installed::executable("claude"), program);
     assert!(sw::agents::installed::installed("claude"));
 }
 
